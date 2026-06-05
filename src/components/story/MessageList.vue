@@ -28,7 +28,8 @@ const longPressTimers = new Map<number, ReturnType<typeof setTimeout>>()
 
 function onPointerDown(msgId: number, e: PointerEvent) {
   longPressTimers.set(msgId, setTimeout(() => {
-    emit('contextMenu', msgId, e.clientX, e.clientY)
+    const msg = messages.value.find(m => m.id === msgId)
+    emit('contextMenu', msgId, e.clientX, e.clientY, msg?.role || 'user')
     longPressTimers.delete(msgId)
   }, 500))
 }
