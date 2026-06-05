@@ -178,23 +178,8 @@ async function handleResendFromHere() {
     messageListRef.value?.removeMessage(m.id!)
   }
 
-  // 获取之前的最后一条用户消息，若被右键的本身就是第一条用户消息则用它
-  const prevMsgs = allMsgs.slice(0, idx)
-  let lastUserMsg = prevMsgs.filter(m => m.role === 'user').pop()
-  if (!lastUserMsg && msg.role === 'user') {
-    lastUserMsg = msg
-  }
-
-  if (lastUserMsg) {
-    try {
-      const aiMsgId = await executeAiInference(archiveId.value, lastUserMsg.content)
-      await messageListRef.value?.appendAiMessage()
-      await updateCounts()
-      await loadArchive()
-    } catch {
-      // 错误已处理
-    }
-  }
+  // 用被右键的用户消息内容重新发送
+  await handleSend(msg.content)
 }
 
 function handleDeleteMessage() {

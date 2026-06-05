@@ -123,7 +123,6 @@ async function appendAiMessage() {
   const last = msgs.filter(m => m.role === 'assistant').pop()
   if (last) {
     messages.value.push(last)
-    await scrollToBottom()
   }
 }
 

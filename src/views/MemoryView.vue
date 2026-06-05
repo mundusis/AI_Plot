@@ -47,10 +47,8 @@ async function loadData() {
 function toggleMessage(index: number) {
   const newSet = new Set(selectedIndices.value)
   if (newSet.has(index)) {
-    // 取消选中该消息及之后所有已选中消息
-    for (let i = index; i < messages.value.length; i++) {
-      newSet.delete(i)
-    }
+    // 仅取消选中该消息
+    newSet.delete(index)
   } else {
     // 选中该消息及之前所有未选中的消息
     for (let i = 0; i <= index; i++) {
@@ -58,6 +56,11 @@ function toggleMessage(index: number) {
     }
   }
   selectedIndices.value = newSet
+}
+
+function isSkipped(index: number): boolean {
+  if (selectedIndices.value.has(index)) return false
+  return [...selectedIndices.value].some(si => si > index)
 }
 
 async function handleSummarize() {
@@ -210,7 +213,9 @@ onMounted(() => {
             'px-3 py-2 rounded-md text-sm border cursor-pointer transition-colors mb-1',
             selectedIndices.has(i)
               ? 'border-[var(--color-accent)] bg-[var(--color-accent)]/10'
-              : 'border-[var(--color-border)] hover:bg-[var(--color-surface-hover)]'
+              : isSkipped(i)
+                ? 'border-[#c5c1ba] bg-[#f2f0ed] text-[#b0a9a3]'
+                : 'border-[var(--color-border)] hover:bg-[var(--color-surface-hover)]'
           ]"
           @click="toggleMessage(i)"
         >
