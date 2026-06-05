@@ -1,0 +1,69 @@
+export interface Archive {
+  id?: number
+  title: string
+  createdAt: number
+  selectedApiId?: number
+  promptStory: string
+  promptSummary: string
+  worldSetting: string
+  writingStyle: string
+  outputLimit: string
+  privateConfigs: CustomConfigItem[]
+  worldConfigs: CustomConfigItem[]
+  referencedSystemConfigKeys: string[]
+  memory: {
+    currentStatus: string
+    plotLine: string
+    characters: string
+    relations: string
+    keyInfo: string
+  }
+  tokenStats: {
+    missCost: number
+    hitCost: number
+    outputCost: number
+  }
+}
+
+export interface Message {
+  id?: number
+  archiveId: number
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: number
+  summaryStatus: '未操作' | '已总结' | '已跳过'
+}
+
+export interface ApiConfig {
+  id?: number
+  name: string
+  baseUrl: string
+  apiKey: string
+  model: string
+  modelsList: string[]
+  temperature: number
+}
+
+export interface SystemConfigItem {
+  id?: number
+  key: string
+  value: string
+  createdAt: number
+}
+
+export interface CustomConfigItem {
+  key: string
+  value: string
+}
+
+export interface ParsedBlock {
+  type: 'announcement' | 'dialog' | 'narration' | 'action'
+  content: string
+  speaker?: string
+}
+
+export interface TokenUsage {
+  promptTokens: number
+  cachedTokens: number
+  completionTokens: number
+}

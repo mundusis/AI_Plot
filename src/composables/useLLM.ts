@@ -1,0 +1,213 @@
+import { db } from '@/db'
+import { useSessionStore } from '@/stores/session'
+import { useAppStore } from '@/stores/app'
+import type { Archive, Message, TokenUsage } from '@/types'
+
+async function buildSystemPrompt(archiveId: number): Promise<string> {
+  const archive = await db.archives.get(archiveId)
+  if (!archive) return ''
+
+  const parts: string[] = []
+
+  if (archive.promptStory) parts.push(archive.promptStory)
+  if (archive.worldSetting) parts.push(`【初始世界观】\n${archive.worldSetting}`)
+  if (archive.writingStyle) parts.push(`【文笔要求】\n${archive.writingStyle}`)
+  if (archive.outputLimit) parts.push(`【字数要求】\n${archive.outputLimit}`)
+
+  for (const cfg of archive.privateConfigs) {
+    parts.push(`【${cfg.key}】\n${cfg.value}`)
+  }
+
+  for (const cfg of archive.worldConfigs) {
+    parts.push(`【${cfg.key}】\n${cfg.value}`)
+  }
+
+  for (const key of archive.referencedSystemConfigKeys) {
+    const sysCfg = await db.systemConfigs.where('key').equals(key).first()
+    if (sysCfg) {
+      parts.push(`【${sysCfg.key}】\n${sysCfg.value}`)
+    }
+  }
+
+  const mem = archive.memory
+  if (mem.currentStatus || mem.plotLine || mem.characters || mem.relations || mem.keyInfo) {
+    parts.push(`【当前剧情记忆】
+当前状态：${mem.currentStatus}
+完整剧情脉络：${mem.plotLine}
+出现过的角色：${mem.characters}
+关键角色关系：${mem.relations}
+关键信息：${mem.keyInfo}`)
+  }
+
+  return parts.join('\n\n')
+}
+
+async function buildHistory(archiveId: number) {
+  const messages = await db.messages
+    .where('[archiveId+summaryStatus]')
+    .anyOf([[archiveId, '未操作'], [archiveId, '已跳过']])
+    .sortBy('timestamp')
+
+  return messages.map(msg => ({
+    role: msg.role,
+    content: msg.content,
+  }))
+}
+
+async function callLLM(
+  archiveId: number,
+  systemPrompt: string,
+  history: Array<{ role: string; content: string }>,
+  userContent: string
+): Promise<{ content: string; usage: TokenUsage }> {
+  const sessionStore = useSessionStore()
+  const apiConfig = await db.apiConfigs.get(sessionStore.selectedApiId!)
+
+  if (!apiConfig) throw new Error('未选择 API 配置')
+
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...history,
+    { role: 'user', content: userContent },
+  ]
+
+  const response = await fetch(`${apiConfig.baseUrl}/v1/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiConfig.apiKey}`,
+    },
+    body: JSON.stringify({
+      model: apiConfig.model,
+      temperature: apiConfig.temperature,
+      messages,
+    }),
+  })
+
+  if (!response.ok) throw new Error(`API 请求失败: ${response.status}`)
+
+  const data = await response.json()
+
+  return {
+    content: data.choices[0].message.content,
+    usage: {
+      promptTokens: data.usage?.prompt_tokens ?? 0,
+      cachedTokens: data.usage?.prompt_tokens_details?.cached_tokens ?? 0,
+      completionTokens: data.usage?.completion_tokens ?? 0,
+    },
+  }
+}
+
+export function useLLM() {
+  async function executeAiInference(archiveId: number, userContent: string) {
+    const sessionStore = useSessionStore()
+    const appStore = useAppStore()
+
+    sessionStore.startGenerating()
+
+    try {
+      const systemPrompt = await buildSystemPrompt(archiveId)
+      const history = await buildHistory(archiveId)
+      const result = await callLLM(archiveId, systemPrompt, history, userContent)
+
+      const aiMsgId = await db.messages.add({
+        archiveId,
+        role: 'assistant',
+        content: result.content,
+        timestamp: Date.now(),
+        summaryStatus: '未操作',
+      })
+
+      const archive = await db.archives.get(archiveId)
+      if (archive) {
+        await db.archives.update(archiveId, {
+          tokenStats: {
+            missCost: archive.tokenStats.missCost + (result.usage.promptTokens - result.usage.cachedTokens),
+            hitCost: archive.tokenStats.hitCost + result.usage.cachedTokens,
+            outputCost: archive.tokenStats.outputCost + result.usage.completionTokens,
+          }
+        })
+      }
+
+      return aiMsgId
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'AI 请求失败，请重试'
+      appStore.showToast(msg, 'error')
+      throw error
+    } finally {
+      sessionStore.stopGenerating()
+    }
+  }
+
+  async function callSummaryLLM(
+    archiveId: number,
+    selectedMessages: Message[],
+    existingMemory: Archive['memory']
+  ) {
+    const archive = await db.archives.get(archiveId)
+    const summaryPrompt = archive?.promptSummary || '请对以下内容进行总结。'
+
+    const selectedContent = selectedMessages.map(m =>
+      `[${m.role === 'user' ? '用户' : 'AI'}]: ${m.content.substring(0, 200)}`
+    ).join('\n\n')
+
+    const existingMemoryText = `
+当前状态：${existingMemory.currentStatus}
+完整剧情脉络：${existingMemory.plotLine}
+出现过的角色：${existingMemory.characters}
+关键角色关系：${existingMemory.relations}
+关键信息：${existingMemory.keyInfo}`
+
+    const userContent = `${summaryPrompt}\n\n【现有记忆】\n${existingMemoryText}\n\n【新对话内容】\n${selectedContent}`
+
+    const sessionStore = useSessionStore()
+    const appStore = useAppStore()
+    sessionStore.startGenerating()
+
+    try {
+      const systemPrompt = await buildSystemPrompt(archiveId)
+      const result = await callLLM(archiveId, systemPrompt, [], userContent)
+      sessionStore.stopGenerating()
+      return parseSummaryResult(result.content)
+    } catch (error) {
+      sessionStore.stopGenerating()
+      const msg = error instanceof Error ? error.message : '总结请求失败'
+      appStore.showToast(msg, 'error')
+      throw error
+    }
+  }
+
+  async function fetchModels(baseUrl: string, apiKey: string): Promise<string[]> {
+    const response = await fetch(`${baseUrl}/v1/models`, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+      },
+    })
+    if (!response.ok) throw new Error('获取模型列表失败')
+    const data = await response.json()
+    return (data.data || []).map((m: { id: string }) => m.id)
+  }
+
+  return { executeAiInference, callSummaryLLM, fetchModels }
+}
+
+function parseSummaryResult(result: string): Archive['memory'] {
+  const parts = result.split(/\n(?=当前状态：|完整剧情脉络：|出现过的角色：|关键角色关系：|关键信息：)/)
+  const memory: Archive['memory'] = {
+    currentStatus: '',
+    plotLine: '',
+    characters: '',
+    relations: '',
+    keyInfo: '',
+  }
+
+  for (const part of parts) {
+    if (part.startsWith('当前状态：')) memory.currentStatus = part.replace('当前状态：', '').trim()
+    else if (part.startsWith('完整剧情脉络：')) memory.plotLine = part.replace('完整剧情脉络：', '').trim()
+    else if (part.startsWith('出现过的角色：')) memory.characters = part.replace('出现过的角色：', '').trim()
+    else if (part.startsWith('关键角色关系：')) memory.relations = part.replace('关键角色关系：', '').trim()
+    else if (part.startsWith('关键信息：')) memory.keyInfo = part.replace('关键信息：', '').trim()
+  }
+
+  return memory
+}

@@ -1,0 +1,299 @@
+<script setup lang="ts">
+import { ref, onMounted, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { db } from '@/db'
+import { useSessionStore } from '@/stores/session'
+import { useAppStore } from '@/stores/app'
+import { useLLM } from '@/composables/useLLM'
+import { useMessageParser } from '@/composables/useMessageParser'
+import type { Archive } from '@/types'
+import StoryHeader from '@/components/story/StoryHeader.vue'
+import MessageList from '@/components/story/MessageList.vue'
+import StoryFooter from '@/components/story/StoryFooter.vue'
+import MessageContextMenu from '@/components/story/MessageContextMenu.vue'
+import EditUserMsgModal from '@/components/story/EditUserMsgModal.vue'
+import EditAiMsgModal from '@/components/story/EditAiMsgModal.vue'
+import ConfirmModal from '@/components/common/ConfirmModal.vue'
+import MessageNavButtons from '@/components/story/MessageNavButtons.vue'
+
+const route = useRoute()
+const router = useRouter()
+const sessionStore = useSessionStore()
+const appStore = useAppStore()
+const { executeAiInference } = useLLM()
+const { parseAiContent, blocksToRaw } = useMessageParser()
+
+const archive = ref<Archive | null>(null)
+const messageCount = ref(0)
+const compressedCount = ref(0)
+const messageListRef = ref<InstanceType<typeof MessageList> | null>(null)
+
+// 右键菜单
+const contextMenuVisible = ref(false)
+const contextMenuX = ref(0)
+const contextMenuY = ref(0)
+const contextMsgId = ref<number | null>(null)
+const contextMenuRole = ref<string>('user')
+const resendTargetId = ref<number | null>(null)
+
+// 编辑弹窗
+const editUserMsgVisible = ref(false)
+const editAiMsgVisible = ref(false)
+const editMsgId = ref<number | null>(null)
+
+// 删除确认
+const deleteConfirmVisible = ref(false)
+const deleteConfirmMsgId = ref<number | null>(null)
+
+const archiveId = computed(() => Number(route.params.id))
+
+async function loadArchive() {
+  const a = await db.archives.get(archiveId.value)
+  if (!a) {
+    router.replace('/')
+    return
+  }
+  archive.value = a
+  sessionStore.currentArchiveId = a.id!
+  sessionStore.selectedApiId = a.selectedApiId || null
+  await updateCounts()
+}
+
+async function updateCounts() {
+  const count = await db.messages.where('archiveId').equals(archiveId.value).count()
+  const compressed = await db.messages
+    .where('[archiveId+summaryStatus]')
+    .equals([archiveId.value, '已总结'])
+    .count()
+  messageCount.value = count
+  compressedCount.value = compressed
+}
+
+async function handleSend(text: string) {
+  if (!archive.value) return
+
+  const userMsgId = await db.messages.add({
+    archiveId: archiveId.value,
+    role: 'user',
+    content: text,
+    timestamp: Date.now(),
+    summaryStatus: '未操作',
+  })
+
+  await messageListRef.value?.appendUserMessage()
+
+  try {
+    const aiMsgId = await executeAiInference(archiveId.value, text)
+    await messageListRef.value?.appendAiMessage()
+    await updateCounts()
+    await loadArchive()
+  } catch {
+    // 错误已在 executeAiInference 中处理
+  }
+}
+
+async function handleContinue() {
+  if (!archive.value) return
+
+  try {
+    const aiMsgId = await executeAiInference(archiveId.value, '请继续推进剧情...')
+    await messageListRef.value?.appendAiMessage()
+    await updateCounts()
+    await loadArchive()
+  } catch {
+    // 错误已在 executeAiInference 中处理
+  }
+}
+
+function onContextMenu(messageId: number, x: number, y: number, role: string) {
+  contextMsgId.value = messageId
+  contextMenuX.value = x
+  contextMenuY.value = y
+  contextMenuRole.value = role
+  contextMenuVisible.value = true
+}
+
+function closeContextMenu() {
+  contextMenuVisible.value = false
+  contextMsgId.value = null
+}
+
+async function handleCopyMessage() {
+  if (!contextMsgId.value) return
+  const msg = await db.messages.get(contextMsgId.value)
+  if (!msg) return
+
+  let copyText: string
+  if (msg.role === 'user') {
+    copyText = msg.content
+  } else {
+    const blocks = parseAiContent(msg.content)
+    copyText = blocksToRaw(blocks)
+  }
+
+  try {
+    await navigator.clipboard.writeText(copyText)
+    appStore.showToast('已复制到剪贴板', 'success')
+  } catch {
+    appStore.showToast('复制失败', 'error')
+  }
+  closeContextMenu()
+}
+
+async function handleEditMessage() {
+  if (!contextMsgId.value) return
+  const msg = await db.messages.get(contextMsgId.value)
+  if (!msg) return
+
+  editMsgId.value = contextMsgId.value
+  if (msg.role === 'user') {
+    editUserMsgVisible.value = true
+  } else {
+    editAiMsgVisible.value = true
+  }
+  closeContextMenu()
+}
+
+async function handleResendFromHere() {
+  if (!contextMsgId.value) return
+  const targetId = contextMsgId.value
+  resendTargetId.value = targetId
+  closeContextMenu()
+
+  // 删除当前及之后所有消息
+  const msg = await db.messages.get(targetId)
+  if (!msg) return
+
+  const allMsgs = await db.messages
+    .where('archiveId')
+    .equals(archiveId.value)
+    .sortBy('timestamp')
+
+  const idx = allMsgs.findIndex(m => m.id === msg.id)
+  if (idx === -1) return
+
+  const toDelete = allMsgs.slice(idx)
+  for (const m of toDelete) {
+    await db.messages.delete(m.id!)
+    messageListRef.value?.removeMessage(m.id!)
+  }
+
+  // 获取之前的最后一条用户消息
+  const prevMsgs = allMsgs.slice(0, idx)
+  const lastUserMsg = prevMsgs.filter(m => m.role === 'user').pop()
+
+  if (lastUserMsg) {
+    try {
+      const aiMsgId = await executeAiInference(archiveId.value, lastUserMsg.content)
+      await messageListRef.value?.appendAiMessage()
+      await updateCounts()
+      await loadArchive()
+    } catch {
+      // 错误已处理
+    }
+  }
+}
+
+function handleDeleteMessage() {
+  if (!contextMsgId.value) return
+  deleteConfirmMsgId.value = contextMsgId.value
+  deleteConfirmVisible.value = true
+  closeContextMenu()
+}
+
+async function confirmDeleteMessage() {
+  if (!deleteConfirmMsgId.value) return
+  const msgId = deleteConfirmMsgId.value
+  await db.messages.delete(msgId)
+  messageListRef.value?.removeMessage(msgId)
+  await updateCounts()
+  deleteConfirmVisible.value = false
+  deleteConfirmMsgId.value = null
+}
+
+async function saveEditedUserMsg(content: string) {
+  if (editMsgId.value) {
+    await db.messages.update(editMsgId.value, { content })
+    messageListRef.value?.updateMessage(editMsgId.value)
+  }
+  editUserMsgVisible.value = false
+  editMsgId.value = null
+}
+
+async function saveEditedAiMsg(content: string) {
+  if (editMsgId.value) {
+    await db.messages.update(editMsgId.value, { content })
+    messageListRef.value?.updateMessage(editMsgId.value)
+  }
+  editAiMsgVisible.value = false
+  editMsgId.value = null
+}
+
+onMounted(() => {
+  loadArchive()
+})
+</script>
+
+<template>
+  <div v-if="archive" class="h-full flex flex-col">
+    <StoryHeader
+      :archive="archive"
+      :message-count="messageCount"
+      :compressed-count="compressedCount"
+    />
+
+    <MessageList
+      ref="messageListRef"
+      :archive-id="archiveId"
+      :resend-target-id="resendTargetId"
+      @context-menu="onContextMenu"
+    />
+
+    <StoryFooter
+      @send="handleSend"
+      @continue="handleContinue"
+    />
+
+    <!-- 右键菜单 -->
+    <MessageContextMenu
+      :visible="contextMenuVisible"
+      :x="contextMenuX"
+      :y="contextMenuY"
+      :role="contextMenuRole"
+      @edit="handleEditMessage"
+      @resend="handleResendFromHere"
+      @copy="handleCopyMessage"
+      @delete="handleDeleteMessage"
+      @close="closeContextMenu"
+    />
+
+    <!-- 编辑用户消息弹窗 -->
+    <EditUserMsgModal
+      :visible="editUserMsgVisible"
+      :message-id="editMsgId"
+      @close="editUserMsgVisible = false; editMsgId = null"
+      @save="saveEditedUserMsg"
+    />
+
+    <!-- 编辑AI消息弹窗 -->
+    <EditAiMsgModal
+      :visible="editAiMsgVisible"
+      :message-id="editMsgId"
+      @close="editAiMsgVisible = false; editMsgId = null"
+      @save="saveEditedAiMsg"
+    />
+
+    <!-- 删除确认弹窗 -->
+    <ConfirmModal
+      :visible="deleteConfirmVisible"
+      title="删除消息"
+      message="确认删除该消息？此操作不可撤销。"
+      confirm-text="删除"
+      cancel-text="取消"
+      :danger="true"
+      @confirm="confirmDeleteMessage"
+      @cancel="deleteConfirmVisible = false; deleteConfirmMsgId = null"
+    />
+  </div>
+
+  <div v-else class="h-full flex items-center justify-cente
