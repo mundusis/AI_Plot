@@ -178,9 +178,12 @@ async function handleResendFromHere() {
     messageListRef.value?.removeMessage(m.id!)
   }
 
-  // 获取之前的最后一条用户消息
+  // 获取之前的最后一条用户消息，若被右键的本身就是第一条用户消息则用它
   const prevMsgs = allMsgs.slice(0, idx)
-  const lastUserMsg = prevMsgs.filter(m => m.role === 'user').pop()
+  let lastUserMsg = prevMsgs.filter(m => m.role === 'user').pop()
+  if (!lastUserMsg && msg.role === 'user') {
+    lastUserMsg = msg
+  }
 
   if (lastUserMsg) {
     try {
@@ -254,6 +257,12 @@ onMounted(() => {
       @continue="handleContinue"
     />
 
+    <MessageNavButtons
+      @prev="messageListRef?.scrollToPrevMessage()"
+      @next="messageListRef?.scrollToNextMessage()"
+      @bottom="messageListRef?.scrollToBottom()"
+    />
+
     <!-- 右键菜单 -->
     <MessageContextMenu
       :visible="contextMenuVisible"
@@ -296,4 +305,7 @@ onMounted(() => {
     />
   </div>
 
-  <div v-else class="h-full flex items-center justify-cente
+  <div v-else class="h-full flex items-center justify-center text-[var(--color-text-muted)]">
+    加载中...
+  </div>
+</template>
