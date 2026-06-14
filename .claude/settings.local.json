@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//d/D:/Desktop/Person/**)",
+      "Bash(npm run *)"
+    ]
+  }
+}
