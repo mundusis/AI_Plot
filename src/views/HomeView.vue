@@ -122,23 +122,23 @@ onMounted(() => {
 <template>
   <div class="h-full flex flex-col">
     <!-- 顶部操作栏 -->
-    <header class="flex items-center justify-between px-6 py-4 page-header shrink-0">
+    <header class="flex items-center justify-between px-3 sm:px-6 py-4 page-header shrink-0">
       <h1 class="text-xl font-bold text-[var(--color-accent)]">NarrativeForge</h1>
       <div class="flex items-center gap-3">
         <button
-          class="flex items-center gap-1.5 px-3 py-2 rounded-md bg-[var(--color-accent)] text-white text-sm hover:opacity-90 transition-colors"
+          class="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-md bg-[var(--color-accent)] text-white text-sm hover:opacity-90 transition-colors"
           @click="showNewModal = true"
         >
           <Plus :size="16" />
-          新建存档
+          <span class="hidden sm:inline">新建存档</span>
         </button>
         <ImportArchiveBtn @import="handleImport" />
         <button
-          class="flex items-center gap-1.5 px-3 py-2 rounded-md border border-[var(--color-border)] text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors"
+          class="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-md border border-[var(--color-border)] text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors"
           @click="router.push('/settings')"
         >
           <Settings :size="16" />
-          系统配置
+          <span class="hidden md:inline">系统配置</span>
         </button>
       </div>
     </header>

@@ -52,15 +52,15 @@ function onKeydown(e: KeyboardEvent) {
 
 <template>
   <footer
-    class="flex items-end gap-3 px-4 py-3 border-t border-[var(--color-border)] shrink-0"
+    class="flex items-end gap-2 sm:gap-3 px-2 sm:px-4 py-3 border-t border-[var(--color-border)] shrink-0"
   >
     <button
-      class="flex items-center gap-1.5 px-3 py-2 rounded-md border border-[var(--color-border)] text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+      class="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-md border border-[var(--color-border)] text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
       :disabled="continueDisabled"
       @click="handleContinue"
     >
       <Play :size="16" />
-      继续
+      <span class="hidden sm:inline">继续</span>
     </button>
     <textarea
       ref="textareaRef"
@@ -72,12 +72,12 @@ function onKeydown(e: KeyboardEvent) {
       @keydown="onKeydown"
     />
     <button
-      class="flex items-center gap-1.5 px-4 py-2 rounded-md bg-[var(--color-accent)] text-white text-sm hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+      class="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-md bg-[var(--color-accent)] text-white text-sm hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
       :disabled="sendDisabled"
       @click="handleSend"
     >
       <Send :size="14" />
-      发送
+      <span class="hidden sm:inline">发送</span>
     </button>
   </footer>
 </template>

@@ -116,7 +116,7 @@ async function handleSave() {
 
 <template>
   <div class="h-full flex flex-col">
-    <header class="flex items-center gap-4 px-4 py-3 page-header shrink-0">
+    <header class="flex items-center gap-2 sm:gap-4 px-3 sm:px-4 py-3 page-header shrink-0">
       <button
         class="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
         @click="router.back()"
@@ -125,25 +125,25 @@ async function handleSave() {
       </button>
       <h1 class="text-lg font-semibold flex-1">系统配置</h1>
       <button
-        class="flex items-center gap-1.5 px-3 py-2 rounded-md border border-[var(--color-border)] text-[var(--color-text-secondary)] text-sm hover:bg-[var(--color-surface-hover)] transition-colors"
+        class="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-md border border-[var(--color-border)] text-[var(--color-text-secondary)] text-sm hover:bg-[var(--color-surface-hover)] transition-colors"
         @click="handleImportClick"
       >
         <Upload :size="16" />
-        导入配置
+        <span class="hidden md:inline">导入配置</span>
       </button>
       <button
-        class="flex items-center gap-1.5 px-3 py-2 rounded-md border border-[var(--color-border)] text-[var(--color-text-secondary)] text-sm hover:bg-[var(--color-surface-hover)] transition-colors"
+        class="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-md border border-[var(--color-border)] text-[var(--color-text-secondary)] text-sm hover:bg-[var(--color-surface-hover)] transition-colors"
         @click="handleExport"
       >
         <Download :size="16" />
-        导出配置
+        <span class="hidden md:inline">导出配置</span>
       </button>
       <button
-        class="flex items-center gap-1.5 px-3 py-2 rounded-md bg-[var(--color-accent)] text-white text-sm hover:opacity-90 transition-colors"
+        class="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-md bg-[var(--color-accent)] text-white text-sm hover:opacity-90 transition-colors"
         @click="handleSave"
       >
         <Save :size="16" />
-        保存
+        <span class="hidden sm:inline">保存</span>
       </button>
     </header>
 
