@@ -138,7 +138,7 @@ onMounted(() => {
           @click="router.push('/settings')"
         >
           <Settings :size="16" />
-          配置设置
+          系统配置
         </button>
       </div>
     </header>

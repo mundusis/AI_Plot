@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, toRaw } from 'vue'
+import { ref, onMounted, toRaw, nextTick, computed } from 'vue'
 import { db } from '@/db'
 import { useAppStore } from '@/stores/app'
 import type { SystemConfigItem } from '@/types'
@@ -8,21 +8,68 @@ import ConfirmModal from '@/components/common/ConfirmModal.vue'
 
 const appStore = useAppStore()
 const items = ref<SystemConfigItem[]>([])
+
+const DEFAULT_ITEM_KEYS = new Set(['AI 剧情推动提示词', 'AI 总结提示词'])
+
+const DEFAULT_ITEMS: { key: string; value: string }[] = [
+  {
+    key: 'AI 剧情推动提示词',
+    value: '你是一个专业的剧情跑团主持人（GM）。请根据用户的行动和选择，推进剧情发展。\n\n【回复格式要求】\n你的每次回复必须严格遵循以下格式来组织内容，不同类型的段落使用不同的前缀标记：\n\n1. 系统公告：以 [系统公告] 开头，用于提示重要的系统信息（如属性变化、状态异常、章节标题等）\n   示例：[系统公告]你的生命值减少了5点\n\n2. 角色对话：以 角色名说： 开头，用于角色的台词\n   示例：村长说：勇士们，前方就是龙穴了\n\n3. 动作描写：以 [动作] 开头，用于描述角色的具体行为\n   示例：[动作]他缓缓拔出腰间的长剑\n\n4. 场景旁白：不加任何前缀，用于环境描写、氛围渲染、剧情推进等叙述性内容\n   示例：夕阳将城堡染成了血红色，远处传来低沉的雷鸣\n\n【主持要求】\n1. 营造沉浸式的场景氛围，用生动的描写让玩家身临其境\n2. 合理控制剧情节奏，适时引入冲突、悬念和转折\n3. 扮演所有NPC角色，每个角色需有鲜明的性格和对话风格\n4. 对玩家的行动做出合理的反应，保持世界的逻辑自洽\n5. 在关键节点提供有意义的选择，让玩家推动故事走向',
+  },
+  {
+    key: 'AI 总结提示词',
+    value: '请对以下对话内容进行要点总结，按以下格式输出（每个字段以"当前状态："、"完整剧情脉络："、"出现过的角色："、"关键角色关系："、"关键信息："开头）：\n\n当前状态：简要描述当前场景和角色的即时状态\n完整剧情脉络：梳理剧情发展的关键节点\n出现过的角色：列出所有出场角色及其简要特征\n关键角色关系：记录角色之间的重要关系变化\n关键信息：提取可能影响后续剧情的重要情报',
+  },
+]
+
+function isDefaultKey(key: string): boolean {
+  return DEFAULT_ITEM_KEYS.has(key)
+}
+
 const expandedId = ref<number | null>(null)
 const deleteTarget = ref<number | null>(null)
 const pendingDeletes = ref<Set<number>>(new Set())
+const dirty = ref(false)
 
 const showAddForm = ref(false)
 const newKey = ref('')
 const newValue = ref('')
 const pendingAdds = ref<SystemConfigItem[]>([])
+const listBottom = ref<HTMLElement | null>(null)
 let tempIdCounter = -1
 
 async function loadItems() {
-  const fromDb = await db.systemConfigs.toArray()
+  let fromDb = await db.systemConfigs.toArray()
+
+  for (const old of fromDb) {
+    if (old.key === '大模型剧情推动提示词' || old.key === '大模型总结提示词') {
+      if (old.id) await db.systemConfigs.delete(old.id)
+    }
+  }
+  fromDb = fromDb.filter(i => i.key !== '大模型剧情推动提示词' && i.key !== '大模型总结提示词')
+
+  for (const d of DEFAULT_ITEMS) {
+    if (!fromDb.some(i => i.key === d.key)) {
+      const id = await db.systemConfigs.add({
+        key: d.key,
+        value: d.value,
+        createdAt: Date.now(),
+      } as SystemConfigItem)
+      fromDb.push({ id, key: d.key, value: d.value, createdAt: Date.now() } as SystemConfigItem)
+    }
+  }
+
+  fromDb.sort((a, b) => {
+    const aIsDefault = isDefaultKey(a.key) ? 1 : 0
+    const bIsDefault = isDefaultKey(b.key) ? 1 : 0
+    if (aIsDefault !== bIsDefault) return bIsDefault - aIsDefault
+    return b.createdAt - a.createdAt
+  })
+
   items.value = fromDb
   pendingDeletes.value = new Set()
   pendingAdds.value = []
+  dirty.value = false
 }
 
 function addItem() {
@@ -35,16 +82,21 @@ function addItem() {
   }
   pendingAdds.value.push(newItem)
   items.value.push(newItem)
+  dirty.value = true
   showAddForm.value = false
   newKey.value = ''
   newValue.value = ''
   expandedId.value = newItem.id!
+  nextTick(() => {
+    listBottom.value?.scrollIntoView({ behavior: 'smooth' })
+  })
 }
 
 function updateItem(item: SystemConfigItem) {
   const idx = items.value.findIndex(i => i.id === item.id)
   if (idx !== -1) {
     items.value[idx] = { ...item }
+    dirty.value = true
   }
 }
 
@@ -55,12 +107,18 @@ function requestDelete(id: number) {
 function confirmDelete() {
   if (deleteTarget.value === null) return
   const id = deleteTarget.value
+  const targetItem = items.value.find(i => i.id === id)
+  if (targetItem && isDefaultKey(targetItem.key)) {
+    deleteTarget.value = null
+    return
+  }
   if (id < 0) {
     pendingAdds.value = pendingAdds.value.filter(c => c.id !== id)
   } else {
     pendingDeletes.value = new Set(pendingDeletes.value).add(id)
   }
   items.value = items.value.filter(i => i.id !== id)
+  dirty.value = true
   if (expandedId.value === id) expandedId.value = null
   deleteTarget.value = null
 }
@@ -82,10 +140,13 @@ async function save() {
       await db.systemConfigs.update(raw.id!, { key: raw.key, value: raw.value })
     }
   }
+  dirty.value = false
   await loadItems()
 }
 
-defineExpose({ save })
+const isDirty = computed(() => dirty.value)
+
+defineExpose({ save, loadItems, isDirty })
 
 onMounted(() => {
   loadItems()
@@ -94,7 +155,7 @@ onMounted(() => {
 
 <template>
   <div class="space-y-4">
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between sticky top-0 z-10 bg-[var(--color-bg)] pt-4 pb-2">
       <h2 class="text-lg font-semibold section-title">系统配置项</h2>
       <button
         class="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--color-accent)] text-white hover:opacity-90 transition-colors"
@@ -124,6 +185,7 @@ onMounted(() => {
         <span class="font-semibold">{{ item.key }}</span>
         <div class="flex items-center gap-2">
           <button
+            v-if="!isDefaultKey(item.key)"
             class="text-red-400 hover:text-red-600 transition-colors"
             @click.stop="requestDelete(item.id!)"
           >
@@ -142,7 +204,8 @@ onMounted(() => {
           <input
             :value="item.key"
             type="text"
-            class="w-full bg-[var(--color-bg)] rounded-lg px-3 py-2.5 border border-[var(--color-border)] focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent)]/10 focus:outline-none transition-shadow"
+            :readonly="isDefaultKey(item.key)"
+            :class="['w-full rounded-lg px-3 py-2.5 border transition-shadow', isDefaultKey(item.key) ? 'bg-[var(--color-surface-hover)] text-[var(--color-text-muted)] cursor-not-allowed border-[var(--color-border)]' : 'bg-[var(--color-bg)] border-[var(--color-border)] focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent)]/10 focus:outline-none']"
             placeholder="配置名称"
             @input="(e) => { item.key = (e.target as HTMLInputElement).value; updateItem(item) }"
           />
@@ -204,6 +267,8 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <div ref="listBottom" />
 
     <ConfirmModal
       :visible="deleteTarget !== null"

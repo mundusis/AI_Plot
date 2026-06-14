@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, toRaw } from 'vue'
+import { ref, onMounted, toRaw, nextTick, computed } from 'vue'
 import { db } from '@/db'
 import { useAppStore } from '@/stores/app'
 import { useLLM } from '@/composables/useLLM'
@@ -18,6 +18,8 @@ const pendingDeletes = ref<Set<number>>(new Set())
 const pendingAdds = ref<ApiConfig[]>([])
 const fetchingModelId = ref<number | null>(null)
 const testingModelId = ref<number | null>(null)
+const listBottom = ref<HTMLElement | null>(null)
+const dirty = ref(false)
 let tempIdCounter = -1
 
 async function loadConfigs() {
@@ -25,6 +27,7 @@ async function loadConfigs() {
   configs.value = fromDb
   pendingDeletes.value = new Set()
   pendingAdds.value = []
+  dirty.value = false
 }
 
 function addConfig() {
@@ -39,13 +42,18 @@ function addConfig() {
   }
   pendingAdds.value.push(newCfg)
   configs.value.push(newCfg)
+  dirty.value = true
   expandedId.value = newCfg.id!
+  nextTick(() => {
+    listBottom.value?.scrollIntoView({ behavior: 'smooth' })
+  })
 }
 
 function updateConfig(config: ApiConfig) {
   const idx = configs.value.findIndex(c => c.id === config.id)
   if (idx !== -1) {
     configs.value[idx] = { ...config }
+    dirty.value = true
   }
 }
 
@@ -62,6 +70,7 @@ function confirmDelete() {
     pendingDeletes.value = new Set(pendingDeletes.value).add(id)
   }
   configs.value = configs.value.filter(c => c.id !== id)
+  dirty.value = true
   if (expandedId.value === id) expandedId.value = null
   deleteTarget.value = null
 }
@@ -135,10 +144,13 @@ async function save() {
       await db.apiConfigs.update(raw.id!, JSON.parse(JSON.stringify(raw)))
     }
   }
+  dirty.value = false
   await loadConfigs()
 }
 
-defineExpose({ save })
+const isDirty = computed(() => dirty.value)
+
+defineExpose({ save, loadConfigs, isDirty })
 
 onMounted(() => {
   loadConfigs()
@@ -147,7 +159,7 @@ onMounted(() => {
 
 <template>
   <div class="space-y-4">
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between sticky top-0 z-10 bg-[var(--color-bg)] pt-4 pb-2">
       <h2 class="text-lg font-semibold section-title">API 配置</h2>
       <button
         class="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--color-accent)] text-white hover:opacity-90 transition-colors"
@@ -175,6 +187,8 @@ onMounted(() => {
       @fetch-models="handleFetchModels"
       @test="handleTest"
     />
+
+    <div ref="listBottom" />
 
     <ConfirmModal
       :visible="deleteTarget !== null"

@@ -10,23 +10,22 @@ async function buildSystemPrompt(archiveId: number): Promise<string> {
   const parts: string[] = []
 
   if (archive.promptStory) parts.push(archive.promptStory)
-  if (archive.worldSetting) parts.push(`【初始世界观】\n${archive.worldSetting}`)
-  if (archive.writingStyle) parts.push(`【文笔要求】\n${archive.writingStyle}`)
-  if (archive.outputLimit) parts.push(`【字数要求】\n${archive.outputLimit}`)
-
-  for (const cfg of archive.privateConfigs) {
-    parts.push(`【${cfg.key}】\n${cfg.value}`)
-  }
-
-  for (const cfg of archive.worldConfigs) {
-    parts.push(`【${cfg.key}】\n${cfg.value}`)
-  }
 
   for (const key of archive.referencedSystemConfigKeys) {
     const sysCfg = await db.systemConfigs.where('key').equals(key).first()
     if (sysCfg) {
       parts.push(`【${sysCfg.key}】\n${sysCfg.value}`)
     }
+  }
+
+  for (const cfg of archive.privateConfigs) {
+    parts.push(`【${cfg.key}】\n${cfg.value}`)
+  }
+
+  if (archive.worldSetting) parts.push(`【初始世界观】\n${archive.worldSetting}`)
+
+  for (const cfg of archive.worldConfigs) {
+    parts.push(`【${cfg.key}】\n${cfg.value}`)
   }
 
   const mem = archive.memory
@@ -44,8 +43,7 @@ async function buildSystemPrompt(archiveId: number): Promise<string> {
 
 async function buildHistory(archiveId: number) {
   const messages = await db.messages
-    .where('[archiveId+summaryStatus]')
-    .anyOf([[archiveId, '未操作'], [archiveId, '已跳过']])
+    .where({ archiveId, summaryStatus: '未操作' })
     .sortBy('timestamp')
 
   return messages.map(msg => ({
@@ -148,7 +146,7 @@ export function useLLM() {
     const summaryPrompt = archive?.promptSummary || '请对以下内容进行总结。'
 
     const selectedContent = selectedMessages.map(m =>
-      `[${m.role === 'user' ? '用户' : 'AI'}]: ${m.content.substring(0, 200)}`
+      `[${m.role === 'user' ? '用户' : 'AI'}]: ${m.content}`
     ).join('\n\n')
 
     const existingMemoryText = `
@@ -158,15 +156,14 @@ export function useLLM() {
 关键角色关系：${existingMemory.relations}
 关键信息：${existingMemory.keyInfo}`
 
-    const userContent = `${summaryPrompt}\n\n【现有记忆】\n${existingMemoryText}\n\n【新对话内容】\n${selectedContent}`
+    const userContent = `【现有记忆】\n${existingMemoryText}\n\n【新对话内容】\n${selectedContent}`
 
     const sessionStore = useSessionStore()
     const appStore = useAppStore()
     sessionStore.startGenerating()
 
     try {
-      const systemPrompt = await buildSystemPrompt(archiveId)
-      const result = await callLLM(archiveId, systemPrompt, [], userContent)
+      const result = await callLLM(archiveId, summaryPrompt, [], userContent)
       sessionStore.stopGenerating()
       return parseSummaryResult(result.content)
     } catch (error) {
