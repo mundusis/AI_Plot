@@ -189,7 +189,7 @@ onMounted(() => {
       />
     </div>
     <TypingIndicator v-if="isGenerating" :seconds="generatingSeconds" />
-    <div v-if="messages.length === 0 && !isGenerating" class="flex items-center justify-center h-full text-[var(--color-text-muted)]">
+    <div v-if="messages.length === 0 && !isGenerating" class="flex items-center justify-center h-full text-[var(--color-text-muted)] text-sm sm:text-base">
       尚未开始剧情，请在下方输入框发送消息
     </div>
   </div>

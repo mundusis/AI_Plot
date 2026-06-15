@@ -1,13 +1,35 @@
 <script setup lang="ts">
+import { ref, onUnmounted } from 'vue'
+
 defineEmits<{
   prev: []
   next: []
   bottom: []
 }>()
+
+const visible = ref(false)
+let hideTimer: ReturnType<typeof setTimeout> | null = null
+
+function onScroll() {
+  visible.value = true
+  if (hideTimer) clearTimeout(hideTimer)
+  hideTimer = setTimeout(() => {
+    visible.value = false
+  }, 1500)
+}
+
+document.addEventListener('scroll', onScroll, { passive: true, capture: true })
+
+onUnmounted(() => {
+  document.removeEventListener('scroll', onScroll, { capture: true })
+  if (hideTimer) clearTimeout(hideTimer)
+})
 </script>
 
 <template>
-  <div class="fixed right-3 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-50">
+  <div
+    :class="['fixed right-3 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-50 transition-opacity duration-700', visible ? 'opacity-100' : 'opacity-0 pointer-events-none']"
+  >
     <!-- 上一条消息 -->
     <button
       class="w-9 h-9 rounded-full flex items-center justify-center transition hover:scale-110"
