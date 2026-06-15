@@ -185,7 +185,7 @@ onUnmounted(() => {
 
     <div class="flex border-b border-[var(--color-border)] shrink-0">
       <button v-for="tab in [{k:'world',l:'世界观'},{k:'configs',l:'存档配置项'}]" :key="tab.k"
-        :class="['flex-1 py-2.5 font-medium transition-colors text-base', activeTab === tab.k ? 'text-[var(--color-accent)] border-b-2 border-[var(--color-accent)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]']"
+        :class="['flex-1 py-2.5 font-medium transition-colors text-sm sm:text-base', activeTab === tab.k ? 'text-[var(--color-accent)] border-b-2 border-[var(--color-accent)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]']"
         @click="activeTab = tab.k as any">{{ tab.l }}</button>
     </div>
 
@@ -195,8 +195,8 @@ onUnmounted(() => {
       <template v-if="activeTab === 'configs'">
         <div>
           <div class="flex items-center justify-between mb-2 sticky top-0 z-10 bg-[var(--color-bg)] pt-4 pb-2">
-            <label class="font-medium text-base">私有自定义配置项</label>
-            <button class="flex items-center gap-1 px-2 py-1 rounded border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors text-base"
+            <label class="font-medium text-sm sm:text-base">私有自定义配置项</label>
+            <button class="flex items-center gap-1 px-2 py-1 rounded border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors text-sm sm:text-base"
               @click="showAddPrivateForm = true; expandedPrivateIdx = null"><Plus :size="14" />添加</button>
           </div>
           <div v-for="(cfg, i) in privateConfigs" :key="i" class="border border-[var(--color-border)] rounded-lg overflow-hidden mb-2">
@@ -247,7 +247,7 @@ onUnmounted(() => {
         <!-- 引用系统配置项 -->
         <div ref="systemDropdownRef">
           <div class="flex items-center justify-between mb-2 sticky top-0 z-10 bg-[var(--color-bg)] pt-4 pb-2">
-            <label class="font-medium shrink-0 text-base">引用系统配置项</label>
+            <label class="font-medium shrink-0 text-sm sm:text-base">引用系统配置项</label>
             <div class="flex items-center gap-1">
               <div class="relative">
                 <input v-model="systemSearchInput" type="text" class="w-36 px-2 py-1.5 rounded border border-[var(--color-border)] bg-[var(--color-bg)] text-sm focus:border-[var(--color-accent)] focus:outline-none" placeholder="搜索配置项" @keyup.enter="searchSystemConfigs()" />
@@ -255,8 +255,8 @@ onUnmounted(() => {
                   <div v-for="item in systemSearchResults" :key="item.id" class="px-3 py-1.5 text-sm cursor-pointer hover:bg-[var(--color-surface-hover)] transition-colors" @click="selectSystemResult(item)">{{ item.key }}</div>
                 </div>
               </div>
-              <button class="flex items-center justify-center px-2 py-1 rounded border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors text-base" @click="searchSystemConfigs()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>&#8203;</button>
-              <button class="flex items-center gap-1 px-2 py-1 rounded border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors text-base" @click="addSystemConfig()"><Plus :size="14" />引用</button>
+              <button class="flex items-center justify-center px-2 py-1 rounded border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors text-sm sm:text-base" @click="searchSystemConfigs()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>&#8203;</button>
+              <button class="flex items-center gap-1 px-2 py-1 rounded border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors text-sm sm:text-base" @click="addSystemConfig()"><Plus :size="14" />引用</button>
             </div>
           </div>
 <div v-if="referencedSystemConfigKeys.length === 0" class="text-center py-12 text-sm text-[var(--color-text-muted)] empty-state rounded-lg">
@@ -275,15 +275,15 @@ onUnmounted(() => {
       <template v-if="activeTab === 'world'">
         <div>
           <div class="pt-4 pb-2 mb-2">
-            <label class="font-medium text-base">初始世界观</label>
+            <label class="font-medium text-sm sm:text-base">初始世界观</label>
           </div>
           <textarea v-model="worldSetting" class="w-full px-3 py-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-accent)] focus:outline-none text-sm" rows="2" v-auto-resize placeholder="描述这个世界的背景设定、历史、地理、势力等..." @input="dirty = true" />
         </div>
 
         <div>
           <div class="flex items-center justify-between mb-2">
-            <label class="font-medium text-base">其他世界观</label>
-            <button class="flex items-center gap-1 px-2 py-1 rounded border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors text-base"
+            <label class="font-medium text-sm sm:text-base">其他世界观</label>
+            <button class="flex items-center gap-1 px-2 py-1 rounded border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors text-sm sm:text-base"
               @click="showAddWorldForm = true; expandedWorldIdx = null"><Plus :size="14" />添加</button>
           </div>
           <div v-for="(cfg, i) in worldConfigs" :key="i" class="border border-[var(--color-border)] rounded-lg overflow-hidden mb-2">

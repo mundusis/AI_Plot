@@ -42,22 +42,22 @@ const router = useRouter()
     <div class="flex-1" />
 
     <!-- 右侧按钮组 -->
-    <div class="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap justify-end">
-      <div class="w-full sm:w-auto flex justify-end">
+    <div class="flex items-center gap-x-2 gap-y-1 shrink-0 flex-wrap sm:flex-nowrap justify-end">
+      <div class="w-full sm:w-auto flex justify-end order-1 sm:order-none">
         <ApiSelector />
       </div>
       <button
-        class="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-md border border-[var(--color-border)] text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors"
+        class="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-md border border-[var(--color-border)] text-sm text-[var(--color-text-secondary)] hover:bg-black/[0.06] transition-colors"
         @click="router.push(`/story/${archive.id}/memory`)"
       >
-        <BookOpen :size="16" />
+        <BookOpen :size="18" />
         <span class="hidden md:inline">存档记忆</span>
       </button>
       <button
-        class="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-md border border-[var(--color-border)] text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors"
+        class="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-md border border-[var(--color-border)] text-sm text-[var(--color-text-secondary)] hover:bg-black/[0.06] transition-colors"
         @click="router.push(`/story/${archive.id}/config`)"
       >
-        <Settings :size="14" />
+        <Settings :size="16" />
         <span class="hidden md:inline">存档配置</span>
       </button>
     </div>

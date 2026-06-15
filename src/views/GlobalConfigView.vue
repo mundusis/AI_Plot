@@ -125,14 +125,14 @@ async function handleSave() {
       </button>
       <h1 class="text-lg font-semibold flex-1">系统配置</h1>
       <button
-        class="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-md border border-[var(--color-border)] text-[var(--color-text-secondary)] text-sm hover:bg-[var(--color-surface-hover)] transition-colors"
+        class="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-md border border-[var(--color-border)] text-[var(--color-text-secondary)] text-sm hover:bg-black/[0.06] transition-colors"
         @click="handleImportClick"
       >
         <Upload :size="16" />
         <span class="hidden md:inline">导入配置</span>
       </button>
       <button
-        class="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-md border border-[var(--color-border)] text-[var(--color-text-secondary)] text-sm hover:bg-[var(--color-surface-hover)] transition-colors"
+        class="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-md border border-[var(--color-border)] text-[var(--color-text-secondary)] text-sm hover:bg-black/[0.06] transition-colors"
         @click="handleExport"
       >
         <Download :size="16" />
@@ -150,10 +150,10 @@ async function handleSave() {
     <div class="flex gap-1 px-4 py-2 border-b border-[var(--color-border)] shrink-0">
       <button
         :class="[
-          'flex-1 py-2 rounded-md font-medium transition-all text-base',
+          'flex-1 py-2 rounded-md font-medium transition-all text-sm sm:text-base',
           activeTab === 'api'
             ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)] shadow-sm'
-            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
+            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-black/[0.06]'
         ]"
         @click="activeTab = 'api'"
       >
@@ -161,10 +161,10 @@ async function handleSave() {
       </button>
       <button
         :class="[
-          'flex-1 py-2 rounded-md font-medium transition-all text-base',
+          'flex-1 py-2 rounded-md font-medium transition-all text-sm sm:text-base',
           activeTab === 'system'
             ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)] shadow-sm'
-            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
+            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-black/[0.06]'
         ]"
         @click="activeTab = 'system'"
       >

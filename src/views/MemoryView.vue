@@ -154,35 +154,35 @@ onMounted(() => {
     <div class="flex-1 overflow-y-auto p-4 space-y-4">
       <!-- 记忆编辑区 -->
       <div>
-        <label class="block text-base font-medium mb-1">当前状态</label>
+        <label class="block text-sm sm:text-base font-medium mb-1">当前状态</label>
         <textarea
           v-model="currentStatus"
           class="w-full px-3 py-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-accent)] focus:outline-none text-sm" rows="2" v-auto-resize
         />
       </div>
       <div>
-        <label class="block text-base font-medium mb-1">完整剧情脉络</label>
+        <label class="block text-sm sm:text-base font-medium mb-1">完整剧情脉络</label>
         <textarea
           v-model="plotLine"
           class="w-full px-3 py-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-accent)] focus:outline-none text-sm" rows="2" v-auto-resize
         />
       </div>
       <div>
-        <label class="block text-base font-medium mb-1">出现过的各角色</label>
+        <label class="block text-sm sm:text-base font-medium mb-1">出现过的各角色</label>
         <textarea
           v-model="characters"
           class="w-full px-3 py-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-accent)] focus:outline-none text-sm" rows="2" v-auto-resize
         />
       </div>
       <div>
-        <label class="block text-base font-medium mb-1">关键角色关系</label>
+        <label class="block text-sm sm:text-base font-medium mb-1">关键角色关系</label>
         <textarea
           v-model="relations"
           class="w-full px-3 py-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-accent)] focus:outline-none text-sm" rows="2" v-auto-resize
         />
       </div>
       <div>
-        <label class="block text-base font-medium mb-1">关键信息</label>
+        <label class="block text-sm sm:text-base font-medium mb-1">关键信息</label>
         <textarea
           v-model="keyInfo"
           class="w-full px-3 py-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-accent)] focus:outline-none text-sm" rows="2" v-auto-resize
@@ -191,7 +191,7 @@ onMounted(() => {
 
       <!-- AI 总结按钮 -->
       <button
-        class="w-full py-2 rounded-md bg-[var(--color-accent)] text-white hover:opacity-90 transition-colors text-sm disabled:opacity-50"
+        class="px-8 py-2 rounded-md bg-[var(--color-accent)] text-white hover:opacity-90 transition-colors text-sm disabled:opacity-50 block mx-auto"
         :disabled="summarizing"
         @click="handleSummarize"
       >
@@ -200,10 +200,10 @@ onMounted(() => {
 
       <!-- 对话消息选择列表 -->
       <div>
-        <h3 class="text-base font-medium mb-2">
+        <h3 class="text-sm sm:text-base font-medium mb-2">
           对话消息（未操作: {{ messages.length }} | 已选中: {{ selectedIndices.size }}）
         </h3>
-        <div v-if="messages.length === 0" class="text-base text-[var(--color-text-muted)] text-center py-8">
+        <div v-if="messages.length === 0" class="text-sm sm:text-base text-[var(--color-text-muted)] text-center py-8">
           暂无未操作的消息
         </div>
         <div

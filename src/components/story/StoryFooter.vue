@@ -55,7 +55,7 @@ function onKeydown(e: KeyboardEvent) {
     class="flex items-end gap-2 sm:gap-3 px-2 sm:px-4 py-3 border-t border-[var(--color-border)] shrink-0"
   >
     <button
-      class="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-md border border-[var(--color-border)] text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+      class="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-md border border-[var(--color-border)] text-sm text-[var(--color-text-secondary)] hover:bg-black/[0.06] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
       :disabled="continueDisabled"
       @click="handleContinue"
     >

@@ -182,7 +182,7 @@ function emitUpdate() {
       </div>
 
       <button
-        class="w-full py-1.5 rounded border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-white transition-colors disabled:opacity-50 text-xs"
+        class="px-8 py-2 rounded-md bg-[var(--color-accent)] text-white hover:opacity-90 transition-colors disabled:opacity-50 text-sm block mx-auto"
         :disabled="testing"
         @click="emit('test', config)"
       >

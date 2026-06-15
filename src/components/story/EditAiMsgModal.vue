@@ -4,7 +4,8 @@ import { db } from '@/db'
 import { useMessageParser } from '@/composables/useMessageParser'
 import type { ParsedBlock } from '@/types'
 import BaseModal from '@/components/common/BaseModal.vue'
-import { Plus, Trash2 } from 'lucide-vue-next'
+import { Plus, Trash2, Copy } from 'lucide-vue-next'
+import { useClipboard } from '@/composables/useClipboard'
 
 const props = defineProps<{
   visible: boolean
@@ -17,6 +18,7 @@ const emit = defineEmits<{
 }>()
 
 const { parseAiContent, blocksToRaw } = useMessageParser()
+const { copyToClipboard } = useClipboard()
 const blocks = ref<ParsedBlock[]>([])
 const rawContent = ref('')
 
@@ -47,6 +49,10 @@ function handleSave() {
   const raw = blocksToRaw(blocks.value)
   emit('save', raw)
 }
+
+function copyRaw() {
+  copyToClipboard(rawContent.value)
+}
 </script>
 
 <template>
@@ -61,7 +67,15 @@ function handleSave() {
     </template>
     <div class="flex-1 space-y-3 overflow-y-auto">
       <details class="border border-[var(--color-border)] rounded-lg">
-        <summary class="px-3 py-2 text-sm text-[var(--color-text-secondary)] cursor-pointer select-none">原始内容</summary>
+        <summary class="px-3 py-2 text-sm text-[var(--color-text-secondary)] cursor-pointer select-none flex items-center justify-between">
+          <span>原始内容</span>
+          <button
+            class="shrink-0 text-[var(--color-text-muted)] hover:text-[var(--color-accent)] transition-colors"
+            @click.stop.prevent="copyRaw"
+          >
+            <Copy :size="14" />
+          </button>
+        </summary>
         <pre class="px-3 py-2 text-sm text-[var(--color-text-muted)] whitespace-pre-wrap border-t border-[var(--color-border)]">{{ rawContent }}</pre>
       </details>
       <template v-for="(block, i) in blocks" :key="i">

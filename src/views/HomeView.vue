@@ -134,7 +134,7 @@ onMounted(() => {
         </button>
         <ImportArchiveBtn @import="handleImport" />
         <button
-          class="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-md border border-[var(--color-border)] text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors"
+          class="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-md border border-[var(--color-border)] text-sm text-[var(--color-text-secondary)] hover:bg-black/[0.06] transition-colors"
           @click="router.push('/settings')"
         >
           <Settings :size="16" />

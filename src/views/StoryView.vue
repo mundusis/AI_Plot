@@ -3,9 +3,8 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { db } from '@/db'
 import { useSessionStore } from '@/stores/session'
-import { useAppStore } from '@/stores/app'
 import { useLLM } from '@/composables/useLLM'
-import { useMessageParser } from '@/composables/useMessageParser'
+import { useClipboard } from '@/composables/useClipboard'
 import type { Archive } from '@/types'
 import StoryHeader from '@/components/story/StoryHeader.vue'
 import MessageList from '@/components/story/MessageList.vue'
@@ -19,9 +18,8 @@ import MessageNavButtons from '@/components/story/MessageNavButtons.vue'
 const route = useRoute()
 const router = useRouter()
 const sessionStore = useSessionStore()
-const appStore = useAppStore()
 const { executeAiInference } = useLLM()
-const { parseAiContent, blocksToRaw } = useMessageParser()
+const { copyToClipboard } = useClipboard()
 
 const archive = ref<Archive | null>(null)
 const messageCount = ref(0)
@@ -123,20 +121,7 @@ async function handleCopyMessage() {
   const msg = await db.messages.get(contextMsgId.value)
   if (!msg) return
 
-  let copyText: string
-  if (msg.role === 'user') {
-    copyText = msg.content
-  } else {
-    const blocks = parseAiContent(msg.content)
-    copyText = blocksToRaw(blocks)
-  }
-
-  try {
-    await navigator.clipboard.writeText(copyText)
-    appStore.showToast('已复制到剪贴板', 'success')
-  } catch {
-    appStore.showToast('复制失败', 'error')
-  }
+  await copyToClipboard(msg.content)
   closeContextMenu()
 }
 

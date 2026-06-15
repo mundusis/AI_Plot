@@ -45,12 +45,12 @@ onMounted(() => {
 <template>
   <div class="relative">
     <button
-      class="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-md border border-[var(--color-border)] text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors sm:max-w-[140px] truncate"
+      class="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-md border border-[var(--color-border)] text-sm text-[var(--color-text-secondary)] hover:bg-black/[0.06] transition-colors sm:max-w-[140px] truncate"
       @click="toggleDropdown"
       @blur="onBlur"
     >
       <span class="truncate">{{ currentName }}</span>
-      <ChevronDown :size="12" class="shrink-0" />
+      <ChevronDown :size="14" class="shrink-0" />
     </button>
     <Transition name="dropdown">
       <div
@@ -61,7 +61,7 @@ onMounted(() => {
           v-for="cfg in configs"
           :key="cfg.id"
           :class="[
-            'px-3 py-2 text-sm cursor-pointer hover:bg-[var(--color-surface-hover)] transition-colors',
+            'px-3 py-2 text-sm cursor-pointer hover:bg-black/[0.06] transition-colors',
             cfg.id === sessionStore.selectedApiId ? 'text-[var(--color-accent)] font-medium' : 'text-[var(--color-text-primary)]'
           ]"
           @click="selectConfig(cfg)"
