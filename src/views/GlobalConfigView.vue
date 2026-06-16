@@ -95,11 +95,8 @@ async function confirmImport() {
   const systemConfigsToImport = pendingImportData.value.systemConfigs.map(({ id, ...rest }: any) => JSON.parse(JSON.stringify(rest)))
   await db.apiConfigs.bulkAdd(apiConfigsToImport)
   await db.systemConfigs.bulkAdd(systemConfigsToImport)
-  if (activeTab.value === 'api') {
-    ;(apiPanelRef.value as any)?.loadConfigs?.()
-  } else {
-    ;(systemPanelRef.value as any)?.loadItems?.()
-  }
+  ;(apiPanelRef.value as any)?.loadConfigs?.()
+  ;(systemPanelRef.value as any)?.loadItems?.()
   pendingImportData.value = null
   showImportConfirm.value = false
   appStore.showToast('配置已导入', 'success')
