@@ -6,6 +6,7 @@ import { useSessionStore } from '@/stores/session'
 import { useLLM } from '@/composables/useLLM'
 import { useClipboard } from '@/composables/useClipboard'
 import type { Archive } from '@/types'
+import { ArrowLeft } from 'lucide-vue-next'
 import StoryHeader from '@/components/story/StoryHeader.vue'
 import MessageList from '@/components/story/MessageList.vue'
 import StoryFooter from '@/components/story/StoryFooter.vue'
@@ -25,6 +26,14 @@ const archive = ref<Archive | null>(null)
 const messageCount = ref(0)
 const compressedCount = ref(0)
 const messageListRef = ref<InstanceType<typeof MessageList> | null>(null)
+const headerHidden = ref(false)
+const footerVisible = ref(true)
+const atBottom = ref(true)
+
+function handleAtBottom(val: boolean) {
+  atBottom.value = val
+  footerVisible.value = val
+}
 
 // 右键菜单
 const contextMenuVisible = ref(false)
@@ -67,13 +76,13 @@ async function updateCounts() {
   compressedCount.value = compressed
 }
 
-async function handleSend(text: string) {
+async function handleSend(displayText: string, expandedText: string) {
   if (!archive.value) return
 
   const userMsgId = await db.messages.add({
     archiveId: archiveId.value,
     role: 'user',
-    content: text,
+    content: displayText,
     timestamp: Date.now(),
     summaryStatus: '未操作',
   })
@@ -81,7 +90,7 @@ async function handleSend(text: string) {
   await messageListRef.value?.appendUserMessage()
 
   try {
-    const aiMsgId = await executeAiInference(archiveId.value, text)
+    const aiMsgId = await executeAiInference(archiveId.value, expandedText)
     await messageListRef.value?.appendAiMessage()
     await updateCounts()
     await loadArchive()
@@ -208,24 +217,44 @@ onMounted(() => {
 </script>
 
 <template>
-  <div v-if="archive" class="h-full flex flex-col">
+  <div v-if="archive" class="h-full flex flex-col overflow-hidden relative">
     <StoryHeader
       :archive="archive"
       :message-count="messageCount"
       :compressed-count="compressedCount"
+      :class="headerHidden ? 'max-h-0 !p-0 overflow-hidden opacity-0' : ''"
+      class="transition-all duration-500 ease-out"
     />
+
+    <button
+      class="absolute top-3 left-3 w-9 h-9 rounded-full flex items-center justify-center bg-white/80 shadow-md hover:bg-white z-20 transition-all duration-350 ease-out"
+      :class="headerHidden ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 pointer-events-none'"
+      @click="router.back()"
+    >
+      <ArrowLeft :size="18" />
+    </button>
 
     <MessageList
       ref="messageListRef"
       :archive-id="archiveId"
       :resend-target-id="resendTargetId"
       @context-menu="onContextMenu"
+      @header-hidden="headerHidden = $event"
+      @at-bottom="handleAtBottom"
     />
 
     <StoryFooter
+      :class="footerVisible ? '' : 'max-h-0 !p-0 overflow-hidden opacity-0 pointer-events-none'"
+      class="absolute bottom-0 left-0 right-0 z-10 transition-all duration-500 ease-out"
       @send="handleSend"
       @continue="handleContinue"
     />
+
+    <button
+      class="absolute bottom-2 left-1/2 -translate-x-1/2 h-3 rounded-full bg-white/60 border border-white/80 shadow-md hover:bg-white/80 transition-all duration-500 ease-out z-20"
+      :class="footerVisible ? 'opacity-0 pointer-events-none w-0' : 'opacity-100 w-[30%]'"
+      @click="footerVisible = true"
+    ></button>
 
     <MessageNavButtons
       @prev="messageListRef?.scrollToPrevMessage()"

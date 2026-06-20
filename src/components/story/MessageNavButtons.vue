@@ -15,7 +15,7 @@ function onScroll() {
   if (hideTimer) clearTimeout(hideTimer)
   hideTimer = setTimeout(() => {
     visible.value = false
-  }, 1500)
+  }, 1000)
 }
 
 document.addEventListener('scroll', onScroll, { passive: true, capture: true })

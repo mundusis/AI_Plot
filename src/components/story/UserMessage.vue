@@ -18,7 +18,7 @@ const segments = computed(() => renderUserContent(props.message.content))
 <template>
   <div class="flex justify-end px-4 py-3">
     <div
-      class="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-br-md bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-primary)]"
+      class="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-br-md bg-[rgb(248,246,243)] border border-[var(--color-border)] text-[rgb(140,132,126)]"
       @contextmenu.prevent="emit('contextmenu', $event)"
     >
       <template v-for="(seg, i) in segments.segments" :key="i">

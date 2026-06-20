@@ -1,7 +1,7 @@
 .story-content {
   font-family: var(--font-serif);
   line-height: 1.9;
-  font-size: 20px;
+  font-size: 18px;
 }
 
 .block-announcement {
@@ -9,10 +9,33 @@
   width: fit-content;
   margin: 16px auto;
   padding: 8px 24px;
-  border-top: 1px dashed var(--color-border-strong);
-  border-bottom: 1px dashed var(--color-border-strong);
+  position: relative;
   background: rgba(255, 240, 200, 0.3);
-  font-size: 20px;
+  font-size: 18px;
+}
+
+.block-announcement::before,
+.block-announcement::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--color-border-strong) 0px,
+    var(--color-border-strong) 24px,
+    transparent 24px,
+    transparent 36px
+  );
+}
+
+.block-announcement::before {
+  top: 0;
+}
+
+.block-announcement::after {
+  bottom: 0;
 }
 
 .block-narration {
@@ -24,7 +47,7 @@
 
 .block-action {
   font-style: italic;
-  color: var(--color-text-muted);
+  color: #9e8474;
   margin: 2px 0;
 }
 
@@ -40,7 +63,7 @@
 }
 
 .dialog-highlight {
-  color: var(--color-dialog);
+  color: rgb(68, 64, 60);
 }
 
 .book-shelf {

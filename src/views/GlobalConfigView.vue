@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter, onBeforeRouteLeave } from 'vue-router'
-import { ArrowLeft, Save, Download, Upload } from 'lucide-vue-next'
+import { ArrowLeft, Download, Upload } from 'lucide-vue-next'
 import ApiConfigPanel from '@/components/settings/ApiConfigPanel.vue'
 import SystemConfigPanel from '@/components/settings/SystemConfigPanel.vue'
 import { useAppStore } from '@/stores/app'
@@ -102,13 +102,6 @@ async function confirmImport() {
   appStore.showToast('配置已导入', 'success')
 }
 
-async function handleSave() {
-  const panel = activeTab.value === 'api' ? apiPanelRef.value : systemPanelRef.value
-  if (panel) {
-    await panel.save()
-    appStore.showToast('配置已保存', 'success')
-  }
-}
 </script>
 
 <template>
@@ -134,13 +127,6 @@ async function handleSave() {
       >
         <Download :size="16" />
         <span class="hidden md:inline">导出配置</span>
-      </button>
-      <button
-        class="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-md bg-[var(--color-accent)] text-white text-sm hover:opacity-90 transition-colors"
-        @click="handleSave"
-      >
-        <Save :size="16" />
-        <span class="hidden sm:inline">保存</span>
       </button>
     </header>
 

@@ -15,6 +15,33 @@ export class NarrativeForgeDB extends Dexie {
       apiConfigs: '++id, name',
       systemConfigs: '++id, key',
     })
+    this.version(2).stores({
+      archives: '++id, createdAt',
+      messages: '++id, archiveId, [archiveId+timestamp], [archiveId+summaryStatus]',
+      apiConfigs: '++id, name',
+      systemConfigs: '++id, key',
+    }).upgrade(async tx => {
+      const items = await tx.table('systemConfigs').toArray()
+      for (const item of items) {
+        await tx.table('systemConfigs').update(item.id, {
+          remark: item.remark || item.key,
+          sortOrder: item.sortOrder || item.createdAt,
+        })
+      }
+    })
+    this.version(3).stores({
+      archives: '++id, createdAt',
+      messages: '++id, archiveId, [archiveId+timestamp], [archiveId+summaryStatus]',
+      apiConfigs: '++id, name',
+      systemConfigs: '++id, key',
+    }).upgrade(async tx => {
+      const items = await tx.table('apiConfigs').toArray()
+      for (const item of items) {
+        await tx.table('apiConfigs').update(item.id, {
+          sortOrder: item.sortOrder !== undefined ? item.sortOrder : item.id,
+        })
+      }
+    })
   }
 }
 

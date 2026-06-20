@@ -3,12 +3,12 @@
 @tailwind utilities;
 
 :root {
-  --color-bg: #fefdfb;
+  --color-bg: rgb(250, 248, 245);
   --color-surface: #ffffff;
   --color-surface-hover: #f9f5ef;
   --color-text-primary: #2c1508;
   --color-text-secondary: #6b4f3c;
-  --color-text-muted: #9b8070;
+  --color-text-muted: #947a6a;
   --color-accent: #7B4B3A;
   --color-dialog: #7B3A1F;
   --color-danger: #c0392b;
@@ -75,4 +75,13 @@ button {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+/* 隐藏原生滚动条 */
+.custom-scrollbar {
+  scrollbar-width: none;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  display: none;
 }

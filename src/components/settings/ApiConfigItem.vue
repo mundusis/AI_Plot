@@ -8,6 +8,10 @@ const props = defineProps<{
   expanded: boolean
   fetching?: boolean
   testing?: boolean
+  idx: number
+  dragOver: boolean
+  isDragging: boolean
+  dirty?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -16,6 +20,11 @@ const emit = defineEmits<{
   delete: [id: number]
   fetchModels: [config: ApiConfig]
   test: [config: ApiConfig]
+  save: [config: ApiConfig]
+  dragStart: [e: DragEvent, idx: number]
+  dragOver: [e: DragEvent, idx: number]
+  drop: [e: DragEvent, idx: number]
+  dragEnd: []
 }>()
 
 const showKey = ref(false)
@@ -61,13 +70,20 @@ function emitUpdate() {
   <div
     :class="[
       'border rounded-lg overflow-hidden transition-shadow',
-      expanded ? 'border-[var(--color-accent)]/30 shadow-sm' : 'border-[var(--color-border)] hover:shadow-sm'
+      expanded ? 'border-[var(--color-accent)]/30 shadow-sm' : 'border-[var(--color-border)] hover:shadow-sm',
+      dragOver ? 'border-t-2 border-t-[var(--color-accent)]' : '',
     ]"
   >
     <!-- 折叠标题栏 -->
     <div
+      draggable="true"
       class="w-full flex items-center justify-between px-4 py-3 hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer select-none"
+      :class="{ 'cursor-grab': !isDragging, 'cursor-grabbing': isDragging }"
       @click="emit('toggle')"
+      @dragstart="emit('dragStart', $event, idx)"
+      @dragover="emit('dragOver', $event, idx)"
+      @drop="emit('drop', $event, idx)"
+      @dragend="emit('dragEnd')"
     >
       <span class="font-semibold text-sm">{{ config.name }}</span>
       <div class="flex items-center gap-2">
@@ -182,11 +198,18 @@ function emitUpdate() {
       </div>
 
       <button
-        class="px-8 py-2 rounded-md bg-[var(--color-accent)] text-white hover:opacity-90 transition-colors disabled:opacity-50 text-sm block mx-auto"
+        style="width: 95%" class="py-2 rounded-lg border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 transition-colors disabled:opacity-50 text-sm block mx-auto"
         :disabled="testing"
         @click="emit('test', config)"
       >
         {{ testing ? '测试中...' : '测试连接' }}
+      </button>
+      <button
+        style="width: 95%" class="py-2 rounded-lg bg-[var(--color-accent)] text-white hover:opacity-90 transition-colors disabled:opacity-50 text-sm block mx-auto"
+        :disabled="!dirty"
+        @click="emit('save', config)"
+      >
+        保存
       </button>
     </div>
   </div>

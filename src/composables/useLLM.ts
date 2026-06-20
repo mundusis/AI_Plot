@@ -11,8 +11,8 @@ async function buildSystemPrompt(archiveId: number): Promise<string> {
 
   if (archive.promptStory) parts.push(archive.promptStory)
 
-  for (const key of archive.referencedSystemConfigKeys) {
-    const sysCfg = await db.systemConfigs.where('key').equals(key).first()
+  for (const id of archive.referencedSystemConfigKeys) {
+    const sysCfg = await db.systemConfigs.get(id)
     if (sysCfg) {
       parts.push(`【${sysCfg.key}】\n${sysCfg.value}`)
     }
@@ -29,13 +29,13 @@ async function buildSystemPrompt(archiveId: number): Promise<string> {
   }
 
   const mem = archive.memory
-  if (mem.currentStatus || mem.plotLine || mem.characters || mem.relations || mem.keyInfo) {
+  if (mem.currentStatus || mem.plotLine || mem.characterRelations || mem.pendingIssues || mem.keyInfo) {
     parts.push(`【当前剧情记忆】
-当前状态：${mem.currentStatus}
-完整剧情脉络：${mem.plotLine}
-出现过的角色：${mem.characters}
-关键角色关系：${mem.relations}
-关键信息：${mem.keyInfo}`)
+[当前状态]${mem.currentStatus}
+[完整剧情进展]${mem.plotLine}
+[完整角色关系]${mem.characterRelations}
+[待解决问题]${mem.pendingIssues}
+[关键信息]${mem.keyInfo}`)
   }
 
   return parts.join('\n\n')
@@ -56,10 +56,12 @@ async function callLLM(
   archiveId: number,
   systemPrompt: string,
   history: Array<{ role: string; content: string }>,
-  userContent: string
+  userContent: string,
+  apiId?: number
 ): Promise<{ content: string; usage: TokenUsage }> {
   const sessionStore = useSessionStore()
-  const apiConfig = await db.apiConfigs.get(sessionStore.selectedApiId!)
+  const resolvedApiId = apiId ?? (sessionStore.selectedApiId ?? undefined)
+  const apiConfig = resolvedApiId !== undefined ? await db.apiConfigs.get(resolvedApiId) : undefined
 
   if (!apiConfig) throw new Error('未选择 API 配置')
 
@@ -150,11 +152,11 @@ export function useLLM() {
     ).join('\n\n')
 
     const existingMemoryText = `
-当前状态：${existingMemory.currentStatus}
-完整剧情脉络：${existingMemory.plotLine}
-出现过的角色：${existingMemory.characters}
-关键角色关系：${existingMemory.relations}
-关键信息：${existingMemory.keyInfo}`
+[当前状态]${existingMemory.currentStatus}
+[完整剧情进展]${existingMemory.plotLine}
+[完整角色关系]${existingMemory.characterRelations}
+[待解决问题]${existingMemory.pendingIssues}
+[关键信息]${existingMemory.keyInfo}`
 
     const userContent = `【现有记忆】\n${existingMemoryText}\n\n【新对话内容】\n${selectedContent}`
 
@@ -163,7 +165,8 @@ export function useLLM() {
     sessionStore.startGenerating()
 
     try {
-      const result = await callLLM(archiveId, summaryPrompt, [], userContent)
+      const apiId = archive?.memoryApiId ?? (sessionStore.selectedApiId ?? undefined)
+      const result = await callLLM(archiveId, summaryPrompt, [], userContent, apiId)
       sessionStore.stopGenerating()
       return parseSummaryResult(result.content)
     } catch (error) {
@@ -189,21 +192,21 @@ export function useLLM() {
 }
 
 function parseSummaryResult(result: string): Archive['memory'] {
-  const parts = result.split(/\n(?=当前状态：|完整剧情脉络：|出现过的角色：|关键角色关系：|关键信息：)/)
+  const parts = result.split(/\n(?=\[当前状态\]|\[完整剧情进展\]|\[完整角色关系\]|\[待解决问题\]|\[关键信息\])/)
   const memory: Archive['memory'] = {
     currentStatus: '',
     plotLine: '',
-    characters: '',
-    relations: '',
+    characterRelations: '',
+    pendingIssues: '',
     keyInfo: '',
   }
 
   for (const part of parts) {
-    if (part.startsWith('当前状态：')) memory.currentStatus = part.replace('当前状态：', '').trim()
-    else if (part.startsWith('完整剧情脉络：')) memory.plotLine = part.replace('完整剧情脉络：', '').trim()
-    else if (part.startsWith('出现过的角色：')) memory.characters = part.replace('出现过的角色：', '').trim()
-    else if (part.startsWith('关键角色关系：')) memory.relations = part.replace('关键角色关系：', '').trim()
-    else if (part.startsWith('关键信息：')) memory.keyInfo = part.replace('关键信息：', '').trim()
+    if (part.startsWith('[当前状态]')) memory.currentStatus = part.replace('[当前状态]', '').trim()
+    else if (part.startsWith('[完整剧情进展]')) memory.plotLine = part.replace('[完整剧情进展]', '').trim()
+    else if (part.startsWith('[完整角色关系]')) memory.characterRelations = part.replace('[完整角色关系]', '').trim()
+    else if (part.startsWith('[待解决问题]')) memory.pendingIssues = part.replace('[待解决问题]', '').trim()
+    else if (part.startsWith('[关键信息]')) memory.keyInfo = part.replace('[关键信息]', '').trim()
   }
 
   return memory

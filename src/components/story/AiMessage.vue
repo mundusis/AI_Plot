@@ -17,7 +17,7 @@ const blocks = computed(() => parseAiContent(props.message.content))
 
 <template>
   <div
-    class="mx-2 my-2 px-4 py-3 border border-[var(--color-border)] rounded-lg"
+    class="mx-2 my-2 px-4 py-3 border border-[var(--color-border)] rounded-lg text-[rgb(68,64,60)]"
     @contextmenu.prevent="emit('contextmenu', $event)"
   >
     <div class="story-content">
@@ -27,7 +27,7 @@ const blocks = computed(() => parseAiContent(props.message.content))
         :class="[
           block.type === 'announcement' ? 'block-announcement' :
           block.type === 'action' ? 'block-action' :
-          block.type === 'dialog' ? 'block-dialog max-w-[85%]' :
+          block.type === 'dialog' ? 'block-dialog max-w-[95%]' :
           'block-narration'
         ]"
       >

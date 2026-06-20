@@ -108,7 +108,8 @@ function copyRaw() {
           </div>
           <textarea
             v-model="block.content"
-            class="w-full bg-[var(--color-bg)] rounded px-2 py-1.5 text-sm border border-[var(--color-border)] focus:border-[var(--color-accent)] focus:outline-none min-h-[60px]"
+            class="w-full bg-[var(--color-bg)] rounded px-2 py-1.5 text-sm border border-[var(--color-border)] focus:border-[var(--color-accent)] focus:outline-none resize-none"
+            v-auto-resize
             placeholder="内容"
           />
         </div>

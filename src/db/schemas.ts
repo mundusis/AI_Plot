@@ -3,6 +3,7 @@ export interface Archive {
   title: string
   createdAt: number
   selectedApiId?: number
+  memoryApiId?: number
   promptStory: string
   promptSummary: string
   worldSetting: string
@@ -10,12 +11,12 @@ export interface Archive {
   outputLimit: string
   privateConfigs: CustomConfigItem[]
   worldConfigs: CustomConfigItem[]
-  referencedSystemConfigKeys: string[]
+  referencedSystemConfigKeys: number[]
   memory: {
     currentStatus: string
     plotLine: string
-    characters: string
-    relations: string
+    characterRelations: string
+    pendingIssues: string
     keyInfo: string
   }
   tokenStats: {
@@ -42,18 +43,22 @@ export interface ApiConfig {
   model: string
   modelsList: string[]
   temperature: number
+  sortOrder: number
 }
 
 export interface SystemConfigItem {
   id?: number
   key: string
   value: string
+  remark: string
+  sortOrder: number
   createdAt: number
 }
 
 export interface CustomConfigItem {
   key: string
   value: string
+  remark: string
 }
 
 export interface ParsedBlock {

@@ -4,8 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { db } from '@/db'
 import { useAppStore } from '@/stores/app'
 import { useLLM } from '@/composables/useLLM'
-import type { Archive, Message } from '@/types'
-import { ArrowLeft, Save } from 'lucide-vue-next'
+import type { ApiConfig, Archive, Message } from '@/types'
+import { ArrowLeft, ChevronDown, Save } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
@@ -18,9 +18,37 @@ const archive = ref<Archive | null>(null)
 // 记忆编辑框
 const currentStatus = ref('')
 const plotLine = ref('')
-const characters = ref('')
-const relations = ref('')
+const characterRelations = ref('')
+const pendingIssues = ref('')
 const keyInfo = ref('')
+
+// 记忆 API 选择器
+const apiConfigs = ref<ApiConfig[]>([])
+const memoryApiName = ref('未选择 API')
+const showApiDropdown = ref(false)
+
+async function loadApiConfigs() {
+  apiConfigs.value = await db.apiConfigs.toArray()
+  if (archive.value?.memoryApiId) {
+    const cfg = apiConfigs.value.find(c => c.id === archive.value!.memoryApiId)
+    if (cfg) memoryApiName.value = cfg.name
+  }
+}
+
+function selectMemoryApi(config: ApiConfig) {
+  memoryApiName.value = config.name
+  showApiDropdown.value = false
+  db.archives.update(archiveId, { memoryApiId: config.id })
+}
+
+function toggleApiDropdown() {
+  showApiDropdown.value = !showApiDropdown.value
+  if (showApiDropdown.value) loadApiConfigs()
+}
+
+function onApiBlur() {
+  setTimeout(() => { showApiDropdown.value = false }, 200)
+}
 
 // 未操作消息列表
 const messages = ref<Message[]>([])
@@ -31,11 +59,12 @@ async function loadData() {
   const a = await db.archives.get(archiveId)
   if (!a) { router.replace('/'); return }
   archive.value = a
+  await loadApiConfigs()
 
   currentStatus.value = a.memory.currentStatus
   plotLine.value = a.memory.plotLine
-  characters.value = a.memory.characters
-  relations.value = a.memory.relations
+  characterRelations.value = a.memory.characterRelations
+  pendingIssues.value = a.memory.pendingIssues
   keyInfo.value = a.memory.keyInfo
 
   messages.value = await db.messages
@@ -78,15 +107,15 @@ async function handleSummarize() {
     const result = await callSummaryLLM(archiveId, selectedMsgs, {
       currentStatus: currentStatus.value,
       plotLine: plotLine.value,
-      characters: characters.value,
-      relations: relations.value,
+      characterRelations: characterRelations.value,
+      pendingIssues: pendingIssues.value,
       keyInfo: keyInfo.value,
     })
 
     currentStatus.value = result.currentStatus || currentStatus.value
     plotLine.value = result.plotLine || plotLine.value
-    characters.value = result.characters || characters.value
-    relations.value = result.relations || relations.value
+    characterRelations.value = result.characterRelations || characterRelations.value
+    pendingIssues.value = result.pendingIssues || pendingIssues.value
     keyInfo.value = result.keyInfo || keyInfo.value
 
     appStore.showToast('AI 总结完成，请检查并保存', 'success')
@@ -105,8 +134,8 @@ async function handleSave() {
     memory: {
       currentStatus: currentStatus.value,
       plotLine: plotLine.value,
-      characters: characters.value,
-      relations: relations.value,
+      characterRelations: characterRelations.value,
+      pendingIssues: pendingIssues.value,
       keyInfo: keyInfo.value,
     }
   })
@@ -161,23 +190,23 @@ onMounted(() => {
         />
       </div>
       <div>
-        <label class="block text-sm sm:text-base font-medium mb-1">完整剧情脉络</label>
+        <label class="block text-sm sm:text-base font-medium mb-1">完整剧情进展</label>
         <textarea
           v-model="plotLine"
           class="w-full px-3 py-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-accent)] focus:outline-none text-sm" rows="2" v-auto-resize
         />
       </div>
       <div>
-        <label class="block text-sm sm:text-base font-medium mb-1">出现过的各角色</label>
+        <label class="block text-sm sm:text-base font-medium mb-1">完整角色关系</label>
         <textarea
-          v-model="characters"
+          v-model="characterRelations"
           class="w-full px-3 py-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-accent)] focus:outline-none text-sm" rows="2" v-auto-resize
         />
       </div>
       <div>
-        <label class="block text-sm sm:text-base font-medium mb-1">关键角色关系</label>
+        <label class="block text-sm sm:text-base font-medium mb-1">待解决问题</label>
         <textarea
-          v-model="relations"
+          v-model="pendingIssues"
           class="w-full px-3 py-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-accent)] focus:outline-none text-sm" rows="2" v-auto-resize
         />
       </div>
@@ -189,9 +218,45 @@ onMounted(() => {
         />
       </div>
 
+      <!-- 总结模型选择 -->
+      <div class="flex items-center gap-3">
+        <label class="text-sm sm:text-base font-medium shrink-0">总结模型</label>
+        <div class="relative flex-1">
+          <button
+            class="flex items-center gap-1.5 w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm text-[var(--color-text-primary)] hover:border-[var(--color-accent)] transition-colors"
+            @click="toggleApiDropdown"
+            @blur="onApiBlur"
+          >
+            <span class="flex-1 text-left truncate">{{ memoryApiName }}</span>
+            <ChevronDown :size="14" class="shrink-0 text-[var(--color-text-muted)]" />
+          </button>
+          <Transition name="dropdown">
+            <div
+              v-if="showApiDropdown"
+              class="absolute left-0 right-0 top-full mt-1 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg shadow-lg z-50 max-h-52 overflow-y-auto"
+            >
+              <div
+                v-for="cfg in apiConfigs"
+                :key="cfg.id"
+                :class="[
+                  'px-3 py-2.5 text-sm cursor-pointer hover:bg-[var(--color-surface-hover)] transition-colors',
+                  cfg.id === archive?.memoryApiId ? 'text-[var(--color-accent)] font-medium bg-[var(--color-accent)]/5' : 'text-[var(--color-text-primary)]'
+                ]"
+                @click="selectMemoryApi(cfg)"
+              >
+                {{ cfg.name }}
+              </div>
+              <div v-if="apiConfigs.length === 0" class="px-3 py-4 text-sm text-[var(--color-text-muted)] text-center">
+                暂无 API 配置
+              </div>
+            </div>
+          </Transition>
+        </div>
+      </div>
+
       <!-- AI 总结按钮 -->
       <button
-        class="px-8 py-2 rounded-md bg-[var(--color-accent)] text-white hover:opacity-90 transition-colors text-sm disabled:opacity-50 block mx-auto"
+        class="w-60 py-2 rounded-lg bg-[var(--color-accent)] text-white hover:opacity-90 transition-colors text-sm disabled:opacity-50 block mx-auto"
         :disabled="summarizing"
         @click="handleSummarize"
       >
@@ -226,3 +291,15 @@ onMounted(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+</style>

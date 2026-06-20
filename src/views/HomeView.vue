@@ -56,8 +56,8 @@ async function createArchive(title: string) {
     memory: {
       currentStatus: '',
       plotLine: '',
-      characters: '',
-      relations: '',
+      characterRelations: '',
+      pendingIssues: '',
       keyInfo: '',
     },
     tokenStats: {
