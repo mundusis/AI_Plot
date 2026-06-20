@@ -222,8 +222,8 @@ onMounted(() => {
       :archive="archive"
       :message-count="messageCount"
       :compressed-count="compressedCount"
-      :class="headerHidden ? 'max-h-0 !p-0 overflow-hidden opacity-0' : ''"
-      class="transition-all duration-500 ease-out"
+      :class="headerHidden ? '-translate-y-full opacity-0' : ''"
+      class="!absolute top-0 left-0 right-0 z-10 !bg-[var(--color-bg)] transition-all duration-500 ease-out"
     />
 
     <button
@@ -245,15 +245,15 @@ onMounted(() => {
 
     <StoryFooter
       :excluded-system-config-ids="archive?.referencedSystemConfigKeys ?? []"
-      :class="footerVisible ? '' : 'max-h-0 !p-0 overflow-hidden opacity-0 pointer-events-none'"
-      class="absolute bottom-0 left-0 right-0 z-10 transition-all duration-500 ease-out"
+      :class="footerVisible ? '' : 'translate-y-full opacity-0 pointer-events-none'"
+      class="!absolute bottom-0 left-0 right-0 z-10 transition-all duration-500 ease-out"
       @send="handleSend"
       @continue="handleContinue"
     />
 
     <button
-      class="absolute bottom-2 left-1/2 -translate-x-1/2 h-3 rounded-full bg-white/60 border border-white/80 shadow-md hover:bg-white/80 transition-all duration-500 ease-out z-20"
-      :class="footerVisible ? 'opacity-0 pointer-events-none w-0' : 'opacity-100 w-[30%]'"
+      class="absolute bottom-2 left-1/2 -translate-x-1/2 h-3 w-[30%] rounded-full bg-white/60 border border-white/80 shadow-md hover:bg-white/80 transition-all duration-500 ease-out z-20"
+      :class="footerVisible ? 'opacity-0 pointer-events-none scale-x-0' : 'opacity-100 scale-x-100'"
       @click="footerVisible = true"
     ></button>
 

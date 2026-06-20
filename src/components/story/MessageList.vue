@@ -50,9 +50,11 @@ const scrollTop = ref(0)
 const scrollHeight = ref(0)
 const clientHeight = ref(0)
 const showScrollbar = ref(false)
+const hoveringScrollbar = ref(false)
 const dragging = ref(false)
 const headerHidden = ref(false)
 let scrollTimer: ReturnType<typeof setTimeout> | null = null
+let scrollbarHoverTimer: ReturnType<typeof setTimeout> | null = null
 let dragStartY = 0
 let dragStartScrollTop = 0
 let lastScrollTop = 0
@@ -68,6 +70,20 @@ const thumbTopPct = computed(() => {
   if (maxScrollTop.value <= 0) return 0
   return (scrollTop.value / maxScrollTop.value) * (100 - thumbHeightPct.value)
 })
+
+function onScrollbarEnter() {
+  hoveringScrollbar.value = true
+  if (scrollbarHoverTimer) {
+    clearTimeout(scrollbarHoverTimer)
+    scrollbarHoverTimer = null
+  }
+}
+
+function onScrollbarLeave() {
+  scrollbarHoverTimer = setTimeout(() => {
+    hoveringScrollbar.value = false
+  }, 1000)
+}
 
 function updateMetrics() {
   nextTick().then(() => {
@@ -169,6 +185,7 @@ onBeforeUnmount(() => {
   }
   longPressTimers.clear()
   if (scrollTimer) clearTimeout(scrollTimer)
+  if (scrollbarHoverTimer) clearTimeout(scrollbarHoverTimer)
   document.removeEventListener('mousemove', onMouseMove)
   document.removeEventListener('mouseup', onMouseUp)
 })
@@ -206,7 +223,11 @@ function scrollToPrevMessage() {
     }
   }
   if (target) {
-    ;(target as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'start' })
+    if (target === items[0]) {
+      el.scrollTo({ top: 0, behavior: 'smooth' })
+    } else {
+      ;(target as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
   }
 }
 
@@ -221,7 +242,11 @@ function scrollToNextMessage() {
     const containerRect = el.getBoundingClientRect()
     const itemTop = rect.top - containerRect.top + st
     if (itemTop > st + 10) {
-      ;(items[i] as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'start' })
+      if (items[i] === items[items.length - 1]) {
+        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+      } else {
+        ;(items[i] as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
       return
     }
   }
@@ -289,7 +314,7 @@ defineExpose({
   <div class="flex-1 relative overflow-hidden">
     <div
       ref="listRef"
-      class="h-full overflow-y-auto py-2 pb-[75px] custom-scrollbar"
+      class="h-full overflow-y-auto pt-[68px] pb-[75px] custom-scrollbar"
       @scroll="onNativeScroll"
     >
       <div
@@ -325,7 +350,9 @@ defineExpose({
     <div
       ref="trackRef"
       class="absolute right-[3px] top-1 bottom-1 w-[4px] z-10 transition-opacity duration-500"
-      :class="showScrollbar || dragging ? 'opacity-100' : 'opacity-0'"
+      :class="showScrollbar || dragging || hoveringScrollbar ? 'opacity-100' : 'opacity-0'"
+      @mouseenter="onScrollbarEnter"
+      @mouseleave="onScrollbarLeave"
       @mousedown="onTrackMouseDown"
     >
       <div
