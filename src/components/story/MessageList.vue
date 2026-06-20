@@ -314,7 +314,7 @@ defineExpose({
   <div class="flex-1 relative overflow-hidden">
     <div
       ref="listRef"
-      class="h-full overflow-y-auto pt-[68px] pb-[75px] custom-scrollbar"
+      class="h-full overflow-y-auto pt-[88px] pb-[80px] custom-scrollbar"
       @scroll="onNativeScroll"
     >
       <div
@@ -349,7 +349,7 @@ defineExpose({
     <!-- 自定义滚动条 -->
     <div
       ref="trackRef"
-      class="absolute right-[3px] top-1 bottom-1 w-[4px] z-10 transition-opacity duration-500"
+      class="absolute right-[3px] top-[88px] bottom-[80px] w-[4px] z-10 transition-opacity duration-500"
       :class="showScrollbar || dragging || hoveringScrollbar ? 'opacity-100' : 'opacity-0'"
       @mouseenter="onScrollbarEnter"
       @mouseleave="onScrollbarLeave"
