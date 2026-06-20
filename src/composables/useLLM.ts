@@ -56,7 +56,6 @@ async function callLLM(
   archiveId: number,
   systemPrompt: string,
   history: Array<{ role: string; content: string }>,
-  userContent: string,
   apiId?: number
 ): Promise<{ content: string; usage: TokenUsage }> {
   const sessionStore = useSessionStore()
@@ -68,7 +67,6 @@ async function callLLM(
   const messages = [
     { role: 'system', content: systemPrompt },
     ...history,
-    { role: 'user', content: userContent },
   ]
 
   const response = await fetch(`${apiConfig.baseUrl}/v1/chat/completions`, {
@@ -99,7 +97,7 @@ async function callLLM(
 }
 
 export function useLLM() {
-  async function executeAiInference(archiveId: number, userContent: string) {
+  async function executeAiInference(archiveId: number, appendContent?: string) {
     const sessionStore = useSessionStore()
     const appStore = useAppStore()
 
@@ -108,7 +106,10 @@ export function useLLM() {
     try {
       const systemPrompt = await buildSystemPrompt(archiveId)
       const history = await buildHistory(archiveId)
-      const result = await callLLM(archiveId, systemPrompt, history, userContent)
+      if (appendContent) {
+        history.push({ role: 'user', content: appendContent })
+      }
+      const result = await callLLM(archiveId, systemPrompt, history)
 
       const aiMsgId = await db.messages.add({
         archiveId,
@@ -166,7 +167,7 @@ export function useLLM() {
 
     try {
       const apiId = archive?.memoryApiId ?? (sessionStore.selectedApiId ?? undefined)
-      const result = await callLLM(archiveId, summaryPrompt, [], userContent, apiId)
+      const result = await callLLM(archiveId, summaryPrompt, [{ role: 'user', content: userContent }], apiId)
       sessionStore.stopGenerating()
       return parseSummaryResult(result.content)
     } catch (error) {

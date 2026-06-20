@@ -242,33 +242,45 @@ function onPaste(e: ClipboardEvent) {
   onInput()
 }
 
-function buildExpandedText(displayText: string): string {
+function buildExpandedText(): string {
   const editor = editorRef.value
-  if (!editor) return displayText
-
-  const spans = editor.querySelectorAll('.temp-ref')
-  if (spans.length === 0) return displayText
+  if (!editor) return ''
 
   const configParts: string[] = []
-  spans.forEach(span => {
-    const el = span as HTMLElement
-    const key = el.dataset.configKey
-    const value = el.dataset.configValue
-    if (key && value) {
-      configParts.push(`【${key}】\n${value}`)
+  const textParts: string[] = []
+
+  function walk(node: Node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      textParts.push(node.textContent || '')
+    } else if (node instanceof HTMLElement && node.classList.contains('temp-ref')) {
+      const key = node.dataset.configKey
+      const value = node.dataset.configValue
+      if (key && value) {
+        configParts.push(`【${key}】\n${value}`)
+      }
+    } else {
+      for (const child of node.childNodes) {
+        walk(child)
+      }
     }
-  })
+  }
 
-  if (configParts.length === 0) return displayText
+  for (const child of editor.childNodes) {
+    walk(child)
+  }
 
-  return displayText + '\n\n[本次临时引用]\n' + configParts.join('\n\n')
+  let result = textParts.join('')
+  if (configParts.length > 0) {
+    result += '\n\n' + configParts.join('\n\n')
+  }
+  return result
 }
 
 function handleSend() {
   if (sendDisabled.value) return
 
   const displayText = editorRef.value?.innerText || ''
-  const expandedText = buildExpandedText(displayText)
+  const expandedText = buildExpandedText()
 
   emit('send', displayText, expandedText)
 

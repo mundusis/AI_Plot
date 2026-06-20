@@ -90,7 +90,7 @@ async function handleSend(displayText: string, expandedText: string) {
   await messageListRef.value?.appendUserMessage()
 
   try {
-    const aiMsgId = await executeAiInference(archiveId.value, expandedText)
+    const aiMsgId = await executeAiInference(archiveId.value)
     await messageListRef.value?.appendAiMessage()
     await updateCounts()
     await loadArchive()
@@ -173,7 +173,7 @@ async function handleResendFromHere() {
   }
 
   // 用被右键的用户消息内容重新发送
-  await handleSend(msg.content)
+  await handleSend(msg.content, msg.content)
 }
 
 function handleDeleteMessage() {
@@ -244,6 +244,7 @@ onMounted(() => {
     />
 
     <StoryFooter
+      :excluded-system-config-ids="archive?.referencedSystemConfigKeys ?? []"
       :class="footerVisible ? '' : 'max-h-0 !p-0 overflow-hidden opacity-0 pointer-events-none'"
       class="absolute bottom-0 left-0 right-0 z-10 transition-all duration-500 ease-out"
       @send="handleSend"
