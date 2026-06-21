@@ -95,12 +95,12 @@ export interface CharacterRole {
   name: string
   age: string
   gender: string
-  personality: string
-  specialAbilities: string
-  preferences: string
-  intro: string
-  family: string
-  specialNotes: string
+  identity: string
+  background: string
+  appearance: string
+  personalityPreferences: string
+  keyLines: string
+  abilities: string
   images: string[]
   createdAt: number
   updatedAt: number

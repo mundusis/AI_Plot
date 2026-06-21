@@ -24,12 +24,12 @@ const archiveId = computed(() => {
 const name = ref('')
 const age = ref('')
 const gender = ref('')
-const personality = ref('')
-const specialAbilities = ref('')
-const preferences = ref('')
-const intro = ref('')
-const family = ref('')
-const specialNotes = ref('')
+const identity = ref('')
+const background = ref('')
+const appearance = ref('')
+const personalityPreferences = ref('')
+const keyLines = ref('')
+const abilities = ref('')
 const images = ref<string[]>([])
 const roleId = ref<number | null>(null)
 const createdAt = ref(Date.now())
@@ -267,12 +267,12 @@ async function generateCharacter() {
   "name": "角色名字",
   "age": "年龄",
   "gender": "性别",
-  "personality": "性格描述",
-  "specialAbilities": "特殊能力",
-  "preferences": "喜好",
-  "intro": "角色简介",
-  "family": "家庭背景",
-  "specialNotes": "特殊备注"
+  "identity": "身份定位",
+  "background": "背景故事",
+  "appearance": "形象与气质",
+  "personalityPreferences": "性格与喜好",
+  "keyLines": "关键台词意象",
+  "abilities": "能力"
 }
 
 如果某个字段用户描述中没有相关信息，请根据上下文合理推断并填写，不要留空。`
@@ -300,12 +300,12 @@ async function generateCharacter() {
       add('名字', name.value)
       add('年龄', age.value)
       add('性别', gender.value)
-      add('性格', personality.value)
-      add('特殊能力', specialAbilities.value)
-      add('喜好', preferences.value)
-      add('简介', intro.value)
-      add('家庭', family.value)
-      add('特殊标注', specialNotes.value)
+      add('身份定位', identity.value)
+      add('背景故事', background.value)
+      add('形象与气质', appearance.value)
+      add('性格与喜好', personalityPreferences.value)
+      add('关键台词意象', keyLines.value)
+      add('能力', abilities.value)
       if (existingFields.length > 0) {
         userContent = `当前角色已有配置：\n${existingFields.join('\n')}\n\n更新要求：${userContent}`
       }
@@ -325,12 +325,12 @@ async function generateCharacter() {
     name.value = parsed.name || ''
     age.value = parsed.age || ''
     gender.value = parsed.gender || ''
-    personality.value = parsed.personality || ''
-    specialAbilities.value = parsed.specialAbilities || ''
-    preferences.value = parsed.preferences || ''
-    intro.value = parsed.intro || ''
-    family.value = parsed.family || ''
-    specialNotes.value = parsed.specialNotes || ''
+    identity.value = parsed.identity || ''
+    background.value = parsed.background || ''
+    appearance.value = parsed.appearance || ''
+    personalityPreferences.value = parsed.personalityPreferences || ''
+    keyLines.value = parsed.keyLines || ''
+    abilities.value = parsed.abilities || ''
 
     localStorage.setItem('characterGenApiId', String(aiApiId.value))
     showAiModal.value = false
@@ -357,12 +357,12 @@ onMounted(async () => {
     name.value = role.name
     age.value = role.age
     gender.value = role.gender
-    personality.value = role.personality
-    specialAbilities.value = role.specialAbilities
-    preferences.value = role.preferences
-    intro.value = role.intro
-    family.value = role.family
-    specialNotes.value = role.specialNotes
+    identity.value = role.identity
+    background.value = role.background
+    appearance.value = role.appearance
+    personalityPreferences.value = role.personalityPreferences
+    keyLines.value = role.keyLines
+    abilities.value = role.abilities
     await preloadImages(role.images)
     images.value = [...role.images]
     createdAt.value = role.createdAt
@@ -418,12 +418,12 @@ async function save() {
       name: name.value.trim(),
       age: age.value.trim(),
       gender: gender.value.trim(),
-      personality: personality.value,
-      specialAbilities: specialAbilities.value,
-      preferences: preferences.value,
-      intro: intro.value,
-      family: family.value,
-      specialNotes: specialNotes.value,
+      identity: identity.value,
+      background: background.value,
+      appearance: appearance.value,
+      personalityPreferences: personalityPreferences.value,
+      keyLines: keyLines.value,
+      abilities: abilities.value,
       images: [...images.value],
       createdAt: createdAt.value,
       updatedAt: Date.now(),
@@ -535,75 +535,75 @@ async function save() {
         </div>
       </div>
 
-      <!-- 性格 -->
+      <!-- 身份定位 -->
       <div>
-        <label class="block text-sm sm:text-base font-medium mb-1">性格</label>
+        <label class="block text-sm sm:text-base font-medium mb-1">身份定位</label>
         <textarea
-          v-model="personality"
+          v-model="identity"
           class="w-full px-3 py-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-accent)] focus:outline-none text-sm"
           rows="2"
           v-auto-resize
-          placeholder="角色的性格特征"
+          placeholder="角色的身份定位"
         />
       </div>
 
-      <!-- 特殊能力 -->
+      <!-- 背景故事 -->
       <div>
-        <label class="block text-sm sm:text-base font-medium mb-1">特殊能力</label>
+        <label class="block text-sm sm:text-base font-medium mb-1">背景故事</label>
         <textarea
-          v-model="specialAbilities"
-          class="w-full px-3 py-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-accent)] focus:outline-none text-sm"
-          rows="2"
-          v-auto-resize
-          placeholder="角色的特殊能力"
-        />
-      </div>
-
-      <!-- 喜好 -->
-      <div>
-        <label class="block text-sm sm:text-base font-medium mb-1">喜好</label>
-        <textarea
-          v-model="preferences"
-          class="w-full px-3 py-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-accent)] focus:outline-none text-sm"
-          rows="2"
-          v-auto-resize
-          placeholder="角色的喜好"
-        />
-      </div>
-
-      <!-- 简介 -->
-      <div>
-        <label class="block text-sm sm:text-base font-medium mb-1">简介</label>
-        <textarea
-          v-model="intro"
+          v-model="background"
           class="w-full px-3 py-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-accent)] focus:outline-none text-sm"
           rows="3"
           v-auto-resize
-          placeholder="角色的简要介绍"
+          placeholder="角色的背景故事"
         />
       </div>
 
-      <!-- 家庭 -->
+      <!-- 形象与气质 -->
       <div>
-        <label class="block text-sm sm:text-base font-medium mb-1">家庭</label>
+        <label class="block text-sm sm:text-base font-medium mb-1">形象与气质</label>
         <textarea
-          v-model="family"
+          v-model="appearance"
           class="w-full px-3 py-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-accent)] focus:outline-none text-sm"
           rows="2"
           v-auto-resize
-          placeholder="角色的家庭背景"
+          placeholder="角色的形象与气质"
         />
       </div>
 
-      <!-- 特殊标注 -->
+      <!-- 性格与喜好 -->
       <div>
-        <label class="block text-sm sm:text-base font-medium mb-1">特殊标注</label>
+        <label class="block text-sm sm:text-base font-medium mb-1">性格与喜好</label>
         <textarea
-          v-model="specialNotes"
+          v-model="personalityPreferences"
           class="w-full px-3 py-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-accent)] focus:outline-none text-sm"
           rows="2"
           v-auto-resize
-          placeholder="需要特别标注的信息"
+          placeholder="角色的性格与喜好"
+        />
+      </div>
+
+      <!-- 关键台词意象 -->
+      <div>
+        <label class="block text-sm sm:text-base font-medium mb-1">关键台词意象</label>
+        <textarea
+          v-model="keyLines"
+          class="w-full px-3 py-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-accent)] focus:outline-none text-sm"
+          rows="2"
+          v-auto-resize
+          placeholder="角色的关键台词意象"
+        />
+      </div>
+
+      <!-- 能力 -->
+      <div>
+        <label class="block text-sm sm:text-base font-medium mb-1">能力</label>
+        <textarea
+          v-model="abilities"
+          class="w-full px-3 py-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-accent)] focus:outline-none text-sm"
+          rows="2"
+          v-auto-resize
+          placeholder="角色的能力"
         />
       </div>
 

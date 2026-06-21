@@ -25,7 +25,7 @@ const DEFAULT_ITEMS: { key: string; value: string; remark: string }[] = [
   {
     key: '底层设定与核心身份',
     remark: 'AI 角色生成提示词',
-    value: '你是一个角色设定生成器。根据用户的描述，生成一个完整的角色设定。\n请严格按照以下JSON格式返回，不要包含任何其他内容（不要markdown代码块标记）：\n\n{\n  "name": "角色名字",\n  "age": "年龄",\n  "gender": "性别",\n  "personality": "性格描述",\n  "specialAbilities": "特殊能力",\n  "preferences": "喜好",\n  "intro": "角色简介",\n  "family": "家庭背景",\n  "specialNotes": "特殊备注"\n}\n\n如果某个字段用户描述中没有相关信息，请根据上下文合理推断并填写，不要留空。',
+    value: '你是一个角色设定生成器。根据用户的描述，生成一个完整的角色设定。\n请严格按照以下JSON格式返回，不要包含任何其他内容（不要markdown代码块标记）：\n\n{\n  "name": "角色名字",\n  "age": "年龄",\n  "gender": "性别",\n  "identity": "身份定位",\n  "background": "背景故事",\n  "appearance": "形象与气质",\n  "personalityPreferences": "性格与喜好",\n  "keyLines": "关键台词意象",\n  "abilities": "能力"\n}\n\n如果某个字段用户描述中没有相关信息，请根据上下文合理推断并填写，不要留空。',
   },
 ]
 

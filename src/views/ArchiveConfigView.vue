@@ -635,7 +635,7 @@ onUnmounted(() => {
 
     <div class="flex border-b border-[var(--color-border)] shrink-0">
       <button v-for="tab in [{k:'world',l:'世界观'},{k:'roles',l:'角色管理'},{k:'configs',l:'存档配置项'}]" :key="tab.k"
-        :class="['flex-1 py-2.5 font-medium transition-colors text-sm sm:text-base', activeTab === tab.k ? 'text-[var(--color-accent)] border-b-2 border-[var(--color-accent)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]']"
+        :class="['flex-1 py-2.5 transition-colors duration-75 h-11 sm:h-12', activeTab === tab.k ? 'text-[var(--color-accent)] font-semibold text-base sm:text-lg shadow-[inset_0_-2px_0_var(--color-accent)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] font-medium text-sm sm:text-base']"
         @click="activeTab = tab.k as any">{{ tab.l }}</button>
     </div>
 

@@ -177,10 +177,10 @@ async function confirmImport() {
     <div class="flex gap-1 px-4 py-2 border-b border-[var(--color-border)] shrink-0">
       <button
         :class="[
-          'flex-1 py-2 rounded-md font-medium transition-all text-sm sm:text-base',
+          'flex-1 py-2 transition-all duration-75 h-10 sm:h-11',
           activeTab === 'api'
-            ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)] shadow-sm'
-            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-black/[0.06]'
+            ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)] font-semibold text-base sm:text-lg rounded-t-md shadow-[inset_0_-2px_0_var(--color-accent)]'
+            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-black/[0.06] font-medium text-sm sm:text-base rounded-md'
         ]"
         @click="activeTab = 'api'"
       >
@@ -188,10 +188,10 @@ async function confirmImport() {
       </button>
       <button
         :class="[
-          'flex-1 py-2 rounded-md font-medium transition-all text-sm sm:text-base',
+          'flex-1 py-2 transition-all duration-75 h-10 sm:h-11',
           activeTab === 'roles'
-            ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)] shadow-sm'
-            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-black/[0.06]'
+            ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)] font-semibold text-base sm:text-lg rounded-t-md shadow-[inset_0_-2px_0_var(--color-accent)]'
+            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-black/[0.06] font-medium text-sm sm:text-base rounded-md'
         ]"
         @click="activeTab = 'roles'"
       >
@@ -199,10 +199,10 @@ async function confirmImport() {
       </button>
       <button
         :class="[
-          'flex-1 py-2 rounded-md font-medium transition-all text-sm sm:text-base',
+          'flex-1 py-2 transition-all duration-75 h-10 sm:h-11',
           activeTab === 'system'
-            ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)] shadow-sm'
-            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-black/[0.06]'
+            ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)] font-semibold text-base sm:text-lg rounded-t-md shadow-[inset_0_-2px_0_var(--color-accent)]'
+            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-black/[0.06] font-medium text-sm sm:text-base rounded-md'
         ]"
         @click="activeTab = 'system'"
       >
