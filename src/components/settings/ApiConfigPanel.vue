@@ -75,10 +75,6 @@ async function handleTestNew() {
 async function addConfig() {
   const name = newName.value.trim()
   if (!name) return
-  if (configs.value.some(c => c.name.trim() === name)) {
-    appStore.showToast(`名称「${name}」已存在，不可重复`, 'error')
-    return
-  }
   const newCfg = {
     name,
     baseUrl: newBaseUrl.value.trim(),

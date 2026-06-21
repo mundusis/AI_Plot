@@ -9,10 +9,12 @@ import RoleManager from '@/components/role/RoleManager.vue'
 import RoleCard from '@/components/role/RoleCard.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import { preloadImages } from '@/composables/useImagePreload'
+import { useDefaultConfigs } from '@/composables/useDefaultConfigs'
 
 const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
+const { isDefaultId, loadDefaultIds } = useDefaultConfigs()
 
 const archiveId = Number(route.params.id)
 const activeTab = ref<'configs' | 'world' | 'roles'>('roles')
@@ -35,8 +37,6 @@ const expandedPrivateIdx = ref<number | null>(null)
 const deletePrivateIdx = ref<number | null>(null)
 const privateDragIdx = ref<number | null>(null)
 const privateDragOverIdx = ref<number | null>(null)
-const privateRemarkBeforeEdit = ref('')
-
 // 世界观 tab 内联新增
 const showAddWorldForm = ref(false)
 const newWorldKey = ref('')
@@ -46,14 +46,13 @@ const expandedWorldIdx = ref<number | null>(null)
 const deleteWorldIdx = ref<number | null>(null)
 const worldDragIdx = ref<number | null>(null)
 const worldDragOverIdx = ref<number | null>(null)
-const worldRemarkBeforeEdit = ref('')
-
 // 系统配置引用
 const systemSearchInput = ref('')
 const systemSearchResults = ref<SystemConfigItem[]>([])
 const showSystemDropdown = ref(false)
 const systemDropdownRef = ref<HTMLElement | null>(null)
 const deleteSystemId = ref<number | null>(null)
+const selectedSystemConfigId = ref<number | null>(null)
 const viewSystemConfigId = ref<number | null>(null)
 const systemConfigDragIdx = ref<number | null>(null)
 const systemConfigDragOverIdx = ref<number | null>(null)
@@ -93,23 +92,21 @@ const systemRoleSearchResults = ref<CharacterRole[]>([])
 const showSystemRoleDropdown = ref(false)
 const systemRoleDropdownRef = ref<HTMLElement | null>(null)
 const removeSystemRoleId = ref<number | null>(null)
+const selectedSystemRoleId = ref<number | null>(null)
 
 const systemRoleDragIdx = ref<number | null>(null)
 const systemRoleDragOverIdx = ref<number | null>(null)
 
 async function loadArchiveRoles() {
-  const all = await db.characterRoles.toArray()
-  const roles = all.filter(r => r.archiveId === archiveId).sort((a, b) => a.sortOrder - b.sortOrder)
+  const roles = await db.characterRoles.where('archiveId').equals(archiveId).sortBy('sortOrder')
   archiveRoles.value = roles
   preloadImages(roles.flatMap(r => r.images || []))
 }
 
 async function loadReferencedSystemRoles() {
-  const all = await db.characterRoles.toArray()
-  const systemRoles = all.filter(r => !r.archiveId)
   const map = new Map<number, CharacterRole>()
   for (const id of referencedSystemRoleIds.value) {
-    const role = systemRoles.find(r => r.id === id)
+    const role = await db.characterRoles.get(id)
     if (role) map.set(id, role)
   }
   referencedRolesCache.value = map
@@ -144,6 +141,7 @@ async function onArchiveRolesReorder(payload: { fromIndex: number; toIndex: numb
 }
 
 async function searchSystemRoles() {
+  selectedSystemRoleId.value = null
   const all = await db.characterRoles.toArray()
   const systemRoles = all.filter(r => !r.archiveId)
   const q = systemRoleSearchInput.value.trim().toLowerCase()
@@ -160,10 +158,30 @@ async function searchSystemRoles() {
 
 function selectSystemRoleResult(role: CharacterRole) {
   systemRoleSearchInput.value = role.name
+  selectedSystemRoleId.value = role.id!
   showSystemRoleDropdown.value = false
 }
 
 async function addSystemRoleReference() {
+  const id = selectedSystemRoleId.value
+  if (id !== null) {
+    const role = await db.characterRoles.get(id)
+    if (!role) { appStore.showToast('该系统角色已被删除', 'error'); return }
+    if (referencedSystemRoleIds.value.includes(id)) {
+      appStore.showToast('该角色已引用', 'error')
+      return
+    }
+    referencedSystemRoleIds.value = [...referencedSystemRoleIds.value, id]
+    await db.archives.update(archiveId, {
+      referencedSystemRoleIds: toRaw(referencedSystemRoleIds.value),
+    })
+    await loadReferencedSystemRoles()
+    systemRoleSearchInput.value = ''
+    selectedSystemRoleId.value = null
+    showSystemRoleDropdown.value = false
+    appStore.showToast('已引用系统角色', 'success')
+    return
+  }
   const q = systemRoleSearchInput.value.trim()
   if (!q) { appStore.showToast('请输入或搜索角色名称', 'error'); return }
   const all = await db.characterRoles.toArray()
@@ -193,6 +211,7 @@ async function removeSystemRoleReference(id: number) {
 function handleSystemRoleClickOutside(e: MouseEvent) {
   if (systemRoleDropdownRef.value && !systemRoleDropdownRef.value.contains(e.target as Node)) {
     showSystemRoleDropdown.value = false
+    selectedSystemRoleId.value = null
   }
 }
 
@@ -283,6 +302,7 @@ async function loadData() {
     referencedSystemRoleIds.value = []
   }
   await refreshSystemConfigCache()
+  await loadDefaultIds()
   await loadArchiveRoles()
   await loadReferencedSystemRoles()
   dirtyPrivateIdx.value.clear()
@@ -314,45 +334,9 @@ async function saveWorldSetting() {
   appStore.showToast('初始世界观已保存', 'success')
 }
 
-function checkPrivateRemarkConflict(remark: string, excludeIdx?: number): boolean {
-  const trimmed = remark.trim()
-  if (!trimmed) return false
-  return privateConfigs.value.some((c, i) => i !== excludeIdx && c.remark.trim() === trimmed)
-}
-
-function validatePrivateRemarkOnBlur(cfg: CustomConfigItem, idx: number) {
-  const trimmed = cfg.remark.trim()
-  if (!trimmed) return
-  if (checkPrivateRemarkConflict(trimmed, idx)) {
-    cfg.remark = privateRemarkBeforeEdit.value
-    appStore.showToast(`备注「${trimmed}」已存在，不可重复`, 'error')
-  }
-  privateRemarkBeforeEdit.value = ''
-}
-
-function checkWorldRemarkConflict(remark: string, excludeIdx?: number): boolean {
-  const trimmed = remark.trim()
-  if (!trimmed) return false
-  return worldConfigs.value.some((c, i) => i !== excludeIdx && c.remark.trim() === trimmed)
-}
-
-function validateWorldRemarkOnBlur(cfg: CustomConfigItem, idx: number) {
-  const trimmed = cfg.remark.trim()
-  if (!trimmed) return
-  if (checkWorldRemarkConflict(trimmed, idx)) {
-    cfg.remark = worldRemarkBeforeEdit.value
-    appStore.showToast(`备注「${trimmed}」已存在，不可重复`, 'error')
-  }
-  worldRemarkBeforeEdit.value = ''
-}
-
 function addPrivateConfig() {
   if (!newPrivateKey.value.trim()) return
   const remark = newPrivateRemark.value.trim() || newPrivateKey.value.trim()
-  if (checkPrivateRemarkConflict(remark)) {
-    appStore.showToast(`备注「${remark}」已存在，不可重复`, 'error')
-    return
-  }
   privateConfigs.value = [...privateConfigs.value, {
     key: newPrivateKey.value.trim(),
     value: newPrivateValue.value,
@@ -362,16 +346,16 @@ function addPrivateConfig() {
   newPrivateValue.value = ''
   newPrivateRemark.value = ''
   showAddPrivateForm.value = false
-  dirtyPrivateIdx.value.add(privateConfigs.value.length - 1)
+  db.archives.update(archiveId, {
+    privateConfigs: JSON.parse(JSON.stringify(toRaw(privateConfigs.value))),
+  }).then(() => {
+    dirtyPrivateIdx.value.clear()
+  })
 }
 
 function addWorldConfig() {
   if (!newWorldKey.value.trim()) return
   const remark = newWorldRemark.value.trim() || newWorldKey.value.trim()
-  if (checkWorldRemarkConflict(remark)) {
-    appStore.showToast(`备注「${remark}」已存在，不可重复`, 'error')
-    return
-  }
   worldConfigs.value = [...worldConfigs.value, {
     key: newWorldKey.value.trim(),
     value: newWorldValue.value,
@@ -381,10 +365,15 @@ function addWorldConfig() {
   newWorldValue.value = ''
   newWorldRemark.value = ''
   showAddWorldForm.value = false
-  dirtyWorldIdx.value.add(worldConfigs.value.length - 1)
+  db.archives.update(archiveId, {
+    worldConfigs: JSON.parse(JSON.stringify(toRaw(worldConfigs.value))),
+  }).then(() => {
+    dirtyWorldIdx.value.clear()
+  })
 }
 
 async function searchSystemConfigs() {
+  selectedSystemConfigId.value = null
   const q = systemSearchInput.value.trim()
   let results: SystemConfigItem[]
   if (!q) {
@@ -392,17 +381,37 @@ async function searchSystemConfigs() {
   } else {
     results = await db.systemConfigs.filter(c => c.key.includes(q) || (c.remark ? c.remark.includes(q) : false)).toArray()
   }
-  results = results.filter(c => !referencedSystemConfigIds.value.includes(c.id!) && c.key !== 'AI 剧情推动提示词' && c.key !== 'AI 总结提示词' && c.key !== 'AI 角色生成提示词')
+  results = results.filter(c => !referencedSystemConfigIds.value.includes(c.id!) && !isDefaultId(c.id!))
   systemSearchResults.value = results
   showSystemDropdown.value = true
 }
 
 function selectSystemResult(item: SystemConfigItem) {
   systemSearchInput.value = item.key
+  selectedSystemConfigId.value = item.id!
   showSystemDropdown.value = false
 }
 
 async function addSystemConfig() {
+  const id = selectedSystemConfigId.value
+  if (id !== null) {
+    const sysCfg = await db.systemConfigs.get(id)
+    if (!sysCfg) { appStore.showToast('该系统配置项已被删除', 'error'); return }
+    if (referencedSystemConfigIds.value.includes(id)) {
+      appStore.showToast('该配置项已引用', 'error')
+      return
+    }
+    referencedSystemConfigIds.value = [...referencedSystemConfigIds.value, id]
+    await db.archives.update(archiveId, {
+      referencedSystemConfigKeys: toRaw(referencedSystemConfigIds.value),
+    })
+    await refreshSystemConfigCache()
+    systemSearchInput.value = ''
+    selectedSystemConfigId.value = null
+    showSystemDropdown.value = false
+    appStore.showToast('已引用系统配置项', 'success')
+    return
+  }
   const key = systemSearchInput.value.trim()
   if (!key) { appStore.showToast('请输入或搜索配置项名称', 'error'); return }
   const sysCfg = await db.systemConfigs.where('key').equals(key).first()
@@ -424,6 +433,7 @@ async function addSystemConfig() {
 function handleClickOutside(e: MouseEvent) {
   if (systemDropdownRef.value && !systemDropdownRef.value.contains(e.target as Node)) {
     showSystemDropdown.value = false
+    selectedSystemConfigId.value = null
   }
 }
 
@@ -470,7 +480,7 @@ function onSystemConfigDragEnd() {
   systemConfigDragOverIdx.value = null
 }
 
-function confirmDeletePrivate() {
+async function confirmDeletePrivate() {
   const idx = deletePrivateIdx.value!
   privateConfigs.value.splice(idx, 1)
   const newSet = new Set<number>()
@@ -480,9 +490,13 @@ function confirmDeletePrivate() {
   }
   dirtyPrivateIdx.value = newSet
   deletePrivateIdx.value = null
+  await db.archives.update(archiveId, {
+    privateConfigs: JSON.parse(JSON.stringify(toRaw(privateConfigs.value))),
+  })
+  dirtyPrivateIdx.value.clear()
 }
 
-function confirmDeleteWorld() {
+async function confirmDeleteWorld() {
   const idx = deleteWorldIdx.value!
   worldConfigs.value.splice(idx, 1)
   const newSet = new Set<number>()
@@ -492,6 +506,10 @@ function confirmDeleteWorld() {
   }
   dirtyWorldIdx.value = newSet
   deleteWorldIdx.value = null
+  await db.archives.update(archiveId, {
+    worldConfigs: JSON.parse(JSON.stringify(toRaw(worldConfigs.value))),
+  })
+  dirtyWorldIdx.value.clear()
 }
 
 // ---- 私有配置拖拽 ----
@@ -533,6 +551,11 @@ function onPrivateDrop(e: DragEvent, targetIdx: number) {
   dirtyPrivateIdx.value = newSet
   privateDragIdx.value = null
   privateDragOverIdx.value = null
+  db.archives.update(archiveId, {
+    privateConfigs: JSON.parse(JSON.stringify(toRaw(privateConfigs.value))),
+  }).then(() => {
+    dirtyPrivateIdx.value.clear()
+  })
 }
 function onPrivateDragEnd() {
   privateDragIdx.value = null
@@ -578,6 +601,11 @@ function onWorldDrop(e: DragEvent, targetIdx: number) {
   dirtyWorldIdx.value = newSet
   worldDragIdx.value = null
   worldDragOverIdx.value = null
+  db.archives.update(archiveId, {
+    worldConfigs: JSON.parse(JSON.stringify(toRaw(worldConfigs.value))),
+  }).then(() => {
+    dirtyWorldIdx.value.clear()
+  })
 }
 function onWorldDragEnd() {
   worldDragIdx.value = null
@@ -633,12 +661,12 @@ onUnmounted(() => {
           <div class="flex items-center justify-between mb-2 sticky top-0 z-10 bg-[var(--color-bg)] pt-4 pb-2">
             <div class="flex items-center gap-2">
               <label class="font-medium shrink-0 text-sm sm:text-base">引用系统角色</label>
-              <div class="flex items-center gap-1">
+              <div class="flex items-center gap-0.5">
                 <div class="relative">
                   <input
                     v-model="systemRoleSearchInput"
                     type="text"
-                    class="w-32 px-2 py-1.5 rounded border border-[var(--color-border)] bg-[var(--color-bg)] text-sm focus:border-[var(--color-accent)] focus:outline-none"
+                    class="w-32 px-2 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] text-xs focus:border-[var(--color-accent)] focus:outline-none"
                     placeholder="搜索系统角色"
                     @keyup.enter="searchSystemRoles()"
                   />
@@ -646,7 +674,7 @@ onUnmounted(() => {
                     <div v-for="role in systemRoleSearchResults" :key="role.id" class="px-3 py-1.5 text-sm cursor-pointer hover:bg-[var(--color-surface-hover)] transition-colors" @click="selectSystemRoleResult(role)">{{ role.name }}</div>
                   </div>
                 </div>
-                <button class="flex items-center justify-center px-2 py-1 rounded border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors text-sm sm:text-base" @click="searchSystemRoles()"><Search :size="14" /></button>
+                <button class="flex items-center gap-1 px-2 py-1 self-stretch rounded border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors text-sm sm:text-base" @click="searchSystemRoles()"><Search :size="14" /></button>
                 <button class="flex items-center gap-1 px-2 py-1 rounded border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors text-sm sm:text-base" @click="addSystemRoleReference()"><Plus :size="14" />引用</button>
               </div>
             </div>
@@ -694,7 +722,7 @@ onUnmounted(() => {
               draggable="true"
               class="w-full flex items-center justify-between px-4 py-3 hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer select-none"
               :class="{ 'cursor-grab': privateDragIdx === null, 'cursor-grabbing': privateDragIdx === i }"
-              @click="expandedPrivateIdx !== i ? (privateRemarkBeforeEdit = cfg.remark, expandedPrivateIdx = i) : expandedPrivateIdx = null"
+              @click="expandedPrivateIdx = expandedPrivateIdx === i ? null : i"
               @dragstart="onPrivateDragStart($event, i)"
               @dragover="onPrivateDragOver($event, i)"
               @drop="onPrivateDrop($event, i)"
@@ -708,7 +736,7 @@ onUnmounted(() => {
             <div v-if="expandedPrivateIdx === i" class="px-4 pb-4 space-y-3 border-t border-[var(--color-border)] pt-3">
               <div>
                 <label class="block text-xs text-[var(--color-text-secondary)] mb-1">备注</label>
-                <input v-model="cfg.remark" type="text" class="w-full bg-[var(--color-bg)] rounded px-3 py-1.5 border border-[var(--color-border)] focus:border-[var(--color-accent)] focus:outline-none text-sm" placeholder="备注" @input="dirtyPrivateIdx.add(i)" @blur="validatePrivateRemarkOnBlur(cfg, i)" />
+                <input v-model="cfg.remark" type="text" class="w-full bg-[var(--color-bg)] rounded px-3 py-1.5 border border-[var(--color-border)] focus:border-[var(--color-accent)] focus:outline-none text-sm" placeholder="备注" @input="dirtyPrivateIdx.add(i)" />
               </div>
               <div>
                 <label class="block text-xs text-[var(--color-text-secondary)] mb-1">配置名称</label>
@@ -761,14 +789,14 @@ onUnmounted(() => {
           <div class="flex items-center justify-between mb-2 sticky top-0 z-10 bg-[var(--color-bg)] pt-4 pb-2">
             <div class="flex items-center gap-2">
               <label class="font-medium shrink-0 text-sm sm:text-base">引用系统配置项</label>
-              <div class="flex items-center gap-1">
+              <div class="flex items-center gap-0.5">
                 <div class="relative">
-                  <input v-model="systemSearchInput" type="text" class="w-36 px-2 py-1.5 rounded border border-[var(--color-border)] bg-[var(--color-bg)] text-sm focus:border-[var(--color-accent)] focus:outline-none" placeholder="搜索配置项" @keyup.enter="searchSystemConfigs()" />
+                  <input v-model="systemSearchInput" type="text" class="w-36 px-2 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] text-xs focus:border-[var(--color-accent)] focus:outline-none" placeholder="搜索配置项" @keyup.enter="searchSystemConfigs()" />
                   <div v-if="showSystemDropdown" class="absolute top-full left-0 right-0 mt-1 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md shadow-lg z-20 max-h-40 overflow-y-auto">
                     <div v-for="item in systemSearchResults" :key="item.id" class="px-3 py-1.5 text-sm cursor-pointer hover:bg-[var(--color-surface-hover)] transition-colors" @click="selectSystemResult(item)">{{ item.remark || item.key }}</div>
                   </div>
                 </div>
-                <button class="flex items-center justify-center px-2 py-1 rounded border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors text-sm sm:text-base" @click="searchSystemConfigs()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>&#8203;</button>
+                <button class="flex items-center gap-1 px-2 py-1 self-stretch rounded border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors text-sm sm:text-base" @click="searchSystemConfigs()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>&#8203;</button>
                 <button class="flex items-center gap-1 px-2 py-1 rounded border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors text-sm sm:text-base" @click="addSystemConfig()"><Plus :size="14" />引用</button>
               </div>
             </div>
@@ -827,7 +855,7 @@ onUnmounted(() => {
               draggable="true"
               class="w-full flex items-center justify-between px-4 py-3 hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer select-none"
               :class="{ 'cursor-grab': worldDragIdx === null, 'cursor-grabbing': worldDragIdx === i }"
-              @click="expandedWorldIdx !== i ? (worldRemarkBeforeEdit = cfg.remark, expandedWorldIdx = i) : expandedWorldIdx = null"
+              @click="expandedWorldIdx = expandedWorldIdx === i ? null : i"
               @dragstart="onWorldDragStart($event, i)"
               @dragover="onWorldDragOver($event, i)"
               @drop="onWorldDrop($event, i)"
@@ -841,7 +869,7 @@ onUnmounted(() => {
             <div v-if="expandedWorldIdx === i" class="px-4 pb-4 space-y-3 border-t border-[var(--color-border)] pt-3">
               <div>
                 <label class="block text-xs text-[var(--color-text-secondary)] mb-1">备注</label>
-                <input v-model="cfg.remark" type="text" class="w-full bg-[var(--color-bg)] rounded px-3 py-1.5 border border-[var(--color-border)] focus:border-[var(--color-accent)] focus:outline-none text-sm" placeholder="备注" @input="dirtyWorldIdx.add(i)" @blur="validateWorldRemarkOnBlur(cfg, i)" />
+                <input v-model="cfg.remark" type="text" class="w-full bg-[var(--color-bg)] rounded px-3 py-1.5 border border-[var(--color-border)] focus:border-[var(--color-accent)] focus:outline-none text-sm" placeholder="备注" @input="dirtyWorldIdx.add(i)" />
               </div>
               <div>
                 <label class="block text-xs text-[var(--color-text-secondary)] mb-1">配置名称</label>

@@ -3,10 +3,11 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { db } from '@/db'
 import { useSessionStore } from '@/stores/session'
 import { storeToRefs } from 'pinia'
+import { useDefaultConfigs } from '@/composables/useDefaultConfigs'
 import type { SystemConfigItem } from '@/types'
 import { Send, Play } from 'lucide-vue-next'
 
-const DEFAULT_SYSTEM_KEYS = ['AI 剧情推动提示词', 'AI 总结提示词', 'AI 角色生成提示词']
+const { isDefaultId, loadDefaultIds } = useDefaultConfigs()
 
 const props = defineProps<{
   excludedSystemConfigIds: number[]
@@ -97,7 +98,7 @@ async function loadDropdownItems(searchTerm: string) {
 
   dropdownItems.value = allConfigs.filter(c => {
     if (c.id === undefined) return false
-    if (DEFAULT_SYSTEM_KEYS.includes(c.key)) return false
+    if (c.id != null && isDefaultId(c.id)) return false
     if (props.excludedSystemConfigIds.includes(c.id)) return false
     if (searchTerm) {
       const matchKey = c.key.includes(searchTerm)
@@ -317,6 +318,7 @@ watch(selectedDropdownIndex, () => {
 })
 
 onMounted(() => {
+  loadDefaultIds()
   document.addEventListener('click', onClickOutside)
 })
 

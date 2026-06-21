@@ -12,6 +12,7 @@ export interface Archive {
   privateConfigs: CustomConfigItem[]
   worldConfigs: CustomConfigItem[]
   referencedSystemConfigKeys: number[]
+  referencedPrivateConfigKeys: string[]
   referencedSystemRoleIds: number[]
   memory: {
     currentStatus: string

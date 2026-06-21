@@ -76,8 +76,7 @@ async function loadArchive() {
 }
 
 async function preloadArchiveRoleImages() {
-  const all = await db.characterRoles.toArray()
-  const roles = all.filter(r => r.archiveId === archiveId.value)
+  const roles = await db.characterRoles.where('archiveId').equals(archiveId.value).toArray()
   preloadImages(roles.flatMap(r => r.images || []))
 }
 

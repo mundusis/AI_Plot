@@ -60,6 +60,7 @@ async function createArchive(title: string) {
     privateConfigs: latest?.privateConfigs ? [...latest.privateConfigs] : [],
     worldConfigs: latest?.worldConfigs ? [...latest.worldConfigs] : [],
     referencedSystemConfigKeys: latest?.referencedSystemConfigKeys ? [...latest.referencedSystemConfigKeys] : [],
+    referencedPrivateConfigKeys: latest?.referencedPrivateConfigKeys ? [...latest.referencedPrivateConfigKeys] : [],
     referencedSystemRoleIds: latest?.referencedSystemRoleIds ? [...latest.referencedSystemRoleIds] : [],
     memory: {
       currentStatus: '',
