@@ -4,7 +4,7 @@ import { db } from '@/db'
 import { useAppStore } from '@/stores/app'
 import { useLLM } from '@/composables/useLLM'
 import type { ApiConfig } from '@/types'
-import { Plus, X } from 'lucide-vue-next'
+import { Plus } from 'lucide-vue-next'
 import ApiConfigItem from './ApiConfigItem.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 
@@ -19,14 +19,8 @@ const testingModelId = ref<number | null>(null)
 const listBottom = ref<HTMLElement | null>(null)
 const dragIndex = ref<number | null>(null)
 const dragOverIndex = ref<number | null>(null)
-const showAddForm = ref(false)
 const dirtyIds = ref(new Set<number>())
-const newName = ref('')
-const newBaseUrl = ref('')
-const newApiKey = ref('')
-const newModel = ref('')
-const newTemperature = ref(0.8)
-const testingNew = ref(false)
+let tempIdCounter = -1
 
 async function loadConfigs() {
   const fromDb = await db.apiConfigs.toArray()
@@ -38,62 +32,19 @@ async function loadConfigs() {
   dirtyIds.value.clear()
 }
 
-async function handleTestNew() {
-  const baseUrl = newBaseUrl.value.trim()
-  const apiKey = newApiKey.value.trim()
-  if (!baseUrl || !apiKey) {
-    appStore.showToast('请先填写 Base URL 和 API Key', 'error')
-    return
-  }
-  testingNew.value = true
-  try {
-    const response = await fetch(`${baseUrl}/v1/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: newModel.value.trim() || 'gpt-3.5-turbo',
-        messages: [{ role: 'user', content: 'Hi' }],
-        max_tokens: 5,
-      }),
-    })
-    if (response.ok) {
-      appStore.showToast('连接测试成功', 'success')
-    } else {
-      const err = await response.text()
-      appStore.showToast(`连接失败: ${response.status} ${err.substring(0, 80)}`, 'error')
-    }
-  } catch {
-    appStore.showToast('网络请求失败，请检查 Base URL', 'error')
-  } finally {
-    testingNew.value = false
-  }
-}
-
-async function addConfig() {
-  const name = newName.value.trim()
-  if (!name) return
-  const newCfg = {
-    name,
-    baseUrl: newBaseUrl.value.trim(),
-    apiKey: newApiKey.value.trim(),
-    model: newModel.value.trim(),
+function addConfig() {
+  const newCfg: ApiConfig = {
+    id: tempIdCounter--,
+    name: '新配置',
+    baseUrl: '',
+    apiKey: '',
+    model: '',
     modelsList: [],
-    temperature: newTemperature.value,
+    temperature: 0.8,
     sortOrder: configs.value.length,
   }
-  const newId = await db.apiConfigs.add(JSON.parse(JSON.stringify(newCfg)) as ApiConfig)
-  const saved: ApiConfig = { ...newCfg, id: newId }
-  configs.value.push(saved)
-  showAddForm.value = false
-  newName.value = ''
-  newBaseUrl.value = ''
-  newApiKey.value = ''
-  newModel.value = ''
-  newTemperature.value = 0.8
-  expandedId.value = newId
+  configs.value.push(newCfg)
+  expandedId.value = newCfg.id!
   nextTick(() => {
     listBottom.value?.scrollIntoView({ behavior: 'smooth' })
   })
@@ -258,14 +209,14 @@ onMounted(() => {
       <h2 class="text-sm sm:text-base font-semibold section-title">API 配置</h2>
       <button
         class="flex items-center gap-1 px-2 py-1 rounded border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors text-sm sm:text-base"
-        @click="showAddForm = true; expandedId = null"
+        @click="addConfig()"
       >
         <Plus :size="14" />
         添加
       </button>
     </div>
 
-    <div v-if="configs.length === 0 && !showAddForm" class="text-center py-12 text-sm text-[var(--color-text-muted)] empty-state rounded-lg">
+    <div v-if="configs.length === 0" class="text-center py-12 text-sm text-[var(--color-text-muted)] empty-state rounded-lg">
       暂无 API 配置
     </div>
 
@@ -291,91 +242,6 @@ onMounted(() => {
       @drop="onDrop"
       @drag-end="onDragEnd"
     />
-
-    <div v-if="showAddForm" class="border border-[var(--color-accent)] rounded-lg overflow-hidden">
-      <div class="w-full flex items-center justify-between px-4 py-3 bg-[var(--color-bg)]">
-        <span class="font-semibold text-sm text-[var(--color-accent)]">新建 API 配置</span>
-        <button
-          class="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-          @click="showAddForm = false; newName = ''; newBaseUrl = ''; newApiKey = ''; newModel = ''; newTemperature = 0.8"
-        >
-          <X :size="16" />
-        </button>
-      </div>
-      <div class="px-4 pb-4 space-y-3 border-t border-[var(--color-border)] pt-3">
-        <div>
-          <label class="block text-xs text-[var(--color-text-secondary)] mb-1">配置名称</label>
-          <input
-            v-model="newName"
-            type="text"
-            class="w-full bg-[var(--color-surface)] rounded-lg px-3 py-1.5 border border-[var(--color-border)] focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent)]/10 focus:outline-none transition-shadow text-sm"
-            placeholder="配置名称"
-          />
-        </div>
-        <div>
-          <label class="block text-xs text-[var(--color-text-secondary)] mb-1">Base URL</label>
-          <input
-            v-model="newBaseUrl"
-            type="text"
-            class="w-full bg-[var(--color-surface)] rounded-lg px-3 py-1.5 border border-[var(--color-border)] focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent)]/10 focus:outline-none transition-shadow text-sm"
-            placeholder="https://api.openai.com"
-          />
-        </div>
-        <div>
-          <label class="block text-xs text-[var(--color-text-secondary)] mb-1">API Key</label>
-          <input
-            v-model="newApiKey"
-            type="password"
-            class="w-full bg-[var(--color-surface)] rounded-lg px-3 py-1.5 border border-[var(--color-border)] focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent)]/10 focus:outline-none transition-shadow text-sm"
-            placeholder="sk-..."
-          />
-        </div>
-        <div>
-          <label class="block text-xs text-[var(--color-text-secondary)] mb-1">模型</label>
-          <input
-            v-model="newModel"
-            type="text"
-            class="w-full bg-[var(--color-surface)] rounded-lg px-3 py-1.5 border border-[var(--color-border)] focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent)]/10 focus:outline-none transition-shadow text-sm"
-            placeholder="输入模型名称"
-          />
-        </div>
-        <div>
-          <label class="block text-xs text-[var(--color-text-secondary)] mb-1">
-            温度: {{ newTemperature.toFixed(1) }}
-          </label>
-          <input
-            v-model.number="newTemperature"
-            type="range"
-            min="0"
-            max="2"
-            step="0.1"
-            class="w-full accent-[var(--color-accent)]"
-          />
-        </div>
-        <button
-          style="width: 95%" class="py-2 rounded-lg border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 transition-colors disabled:opacity-50 text-sm block mx-auto"
-          :disabled="testingNew"
-          @click="handleTestNew()"
-        >
-          {{ testingNew ? '测试中...' : '测试连接' }}
-        </button>
-        <div class="flex justify-end gap-2">
-          <button
-            class="px-3 py-1.5 rounded-md border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors text-xs"
-            @click="showAddForm = false; newName = ''; newBaseUrl = ''; newApiKey = ''; newModel = ''; newTemperature = 0.8"
-          >
-            取消
-          </button>
-          <button
-            class="px-3 py-1.5 rounded-md bg-[var(--color-accent)] text-white hover:opacity-90 transition-colors disabled:opacity-50 text-xs"
-            :disabled="!newName.trim()"
-            @click="addConfig()"
-          >
-            保存
-          </button>
-        </div>
-      </div>
-    </div>
 
     <div ref="listBottom" />
 
