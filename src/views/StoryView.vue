@@ -81,11 +81,10 @@ async function preloadArchiveRoleImages() {
 }
 
 async function updateCounts() {
-  const count = await db.messages.where('archiveId').equals(archiveId.value).count()
-  const compressed = await db.messages
-    .where('[archiveId+summaryStatus]')
-    .equals([archiveId.value, '已总结'])
-    .count()
+  const [count, compressed] = await Promise.all([
+    db.messages.where('archiveId').equals(archiveId.value).count(),
+    db.messages.where('[archiveId+summaryStatus]').equals([archiveId.value, '已总结']).count(),
+  ])
   messageCount.value = count
   compressedCount.value = compressed
 }

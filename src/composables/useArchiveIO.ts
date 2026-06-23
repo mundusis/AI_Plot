@@ -3,10 +3,11 @@ import type { Archive, Message } from '@/types'
 
 export function useArchiveIO() {
   async function exportArchive(archiveId: number) {
-    const archive = await db.archives.get(archiveId)
+    const [archive, messages] = await Promise.all([
+      db.archives.get(archiveId),
+      db.messages.where('archiveId').equals(archiveId).toArray(),
+    ])
     if (!archive) return
-
-    const messages = await db.messages.where('archiveId').equals(archiveId).toArray()
 
     const data = {
       archive,

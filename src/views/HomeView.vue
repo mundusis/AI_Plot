@@ -25,10 +25,10 @@ async function loadArchives() {
   const raw = await db.archives.orderBy('createdAt').reverse().toArray()
   const enriched = await Promise.all(
     raw.map(async (archive) => {
-      const count = await db.messages.where('archiveId').equals(archive.id!).count()
-      const lastMsg = await db.messages
-        .where('archiveId').equals(archive.id!)
-        .reverse().sortBy('timestamp')
+      const [count, lastMsg] = await Promise.all([
+        db.messages.where('archiveId').equals(archive.id!).count(),
+        db.messages.where('archiveId').equals(archive.id!).reverse().sortBy('timestamp'),
+      ])
       const lastUpdated = lastMsg.length > 0
         ? new Date(lastMsg[0].timestamp).toLocaleDateString('zh-CN')
         : new Date(archive.createdAt).toLocaleDateString('zh-CN')

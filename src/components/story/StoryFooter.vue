@@ -27,6 +27,7 @@ const editorText = ref('')
 const showDropdown = ref(false)
 const dropdownItems = ref<SystemConfigItem[]>([])
 const selectedDropdownIndex = ref(0)
+const cachedSystemConfigs = ref<SystemConfigItem[]>([])
 
 const sendDisabled = computed(() => !editorText.value.trim() || isGenerating.value)
 const continueDisabled = computed(() => isGenerating.value)
@@ -93,8 +94,8 @@ async function checkSlashMode() {
   await loadDropdownItems(searchTerm)
 }
 
-async function loadDropdownItems(searchTerm: string) {
-  const allConfigs = await db.systemConfigs.toArray()
+function loadDropdownItems(searchTerm: string) {
+  const allConfigs = cachedSystemConfigs.value
 
   dropdownItems.value = allConfigs.filter(c => {
     if (c.id === undefined) return false
@@ -317,8 +318,9 @@ watch(selectedDropdownIndex, () => {
   scrollDropdownIntoView()
 })
 
-onMounted(() => {
-  loadDefaultIds()
+onMounted(async () => {
+  await loadDefaultIds()
+  cachedSystemConfigs.value = await db.systemConfigs.toArray()
   document.addEventListener('click', onClickOutside)
 })
 

@@ -137,12 +137,9 @@ async function onArchiveRolesReorder(payload: { fromIndex: number; toIndex: numb
   const moved = archiveRoles.value.splice(fromIndex, 1)[0]
   archiveRoles.value.splice(toIndex, 0, moved)
   for (let i = 0; i < archiveRoles.value.length; i++) {
-    const role = archiveRoles.value[i]
-    role.sortOrder = i
-    if (role.id != null) {
-      await db.characterRoles.update(role.id, { sortOrder: i })
-    }
+    archiveRoles.value[i].sortOrder = i
   }
+  await db.characterRoles.bulkPut(archiveRoles.value.filter(r => r.id != null))
 }
 
 async function searchSystemRoles() {

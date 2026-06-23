@@ -11,8 +11,8 @@ async function buildSystemPrompt(archiveId: number): Promise<string> {
 
   if (archive.promptStory) parts.push(archive.promptStory)
 
-  for (const id of archive.referencedSystemConfigKeys) {
-    const sysCfg = await db.systemConfigs.get(id)
+  const systemConfigs = await db.systemConfigs.bulkGet(archive.referencedSystemConfigKeys)
+  for (const sysCfg of systemConfigs) {
     if (sysCfg) {
       parts.push(`【${sysCfg.key}】\n${sysCfg.value}`)
     }
@@ -30,8 +30,8 @@ async function buildSystemPrompt(archiveId: number): Promise<string> {
 
   const roles: CharacterRole[] = []
 
-  for (const id of archive.referencedSystemRoleIds) {
-    const role = await db.characterRoles.get(id)
+  const referencedRolesResult = await db.characterRoles.bulkGet(archive.referencedSystemRoleIds)
+  for (const role of referencedRolesResult) {
     if (role) roles.push(role)
   }
 

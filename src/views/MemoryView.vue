@@ -56,10 +56,20 @@ const selectedIndices = ref<Set<number>>(new Set())
 const summarizing = ref(false)
 
 async function loadData() {
-  const a = await db.archives.get(archiveId)
+  const [a, configs, msgs] = await Promise.all([
+    db.archives.get(archiveId),
+    db.apiConfigs.toArray(),
+    db.messages.where('[archiveId+summaryStatus]').equals([archiveId, '未操作']).sortBy('timestamp'),
+  ])
+
   if (!a) { router.replace('/'); return }
   archive.value = a
-  await loadApiConfigs()
+
+  apiConfigs.value = configs
+  if (a.memoryApiId) {
+    const cfg = configs.find(c => c.id === a.memoryApiId)
+    if (cfg) memoryApiName.value = cfg.name
+  }
 
   currentStatus.value = a.memory.currentStatus
   plotLine.value = a.memory.plotLine
@@ -67,10 +77,7 @@ async function loadData() {
   pendingIssues.value = a.memory.pendingIssues
   keyInfo.value = a.memory.keyInfo
 
-  messages.value = await db.messages
-    .where('[archiveId+summaryStatus]')
-    .equals([archiveId, '未操作'])
-    .sortBy('timestamp')
+  messages.value = msgs
 }
 
 function toggleMessage(index: number) {

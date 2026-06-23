@@ -57,6 +57,7 @@ const headerHidden = ref(false)
 const atBottomLocal = ref(true)
 let scrollTimer: ReturnType<typeof setTimeout> | null = null
 let scrollbarHoverTimer: ReturnType<typeof setTimeout> | null = null
+let saveScrollTimer: ReturnType<typeof setTimeout> | null = null
 let dragStartY = 0
 let dragStartScrollTop = 0
 let lastScrollTop = 0
@@ -196,10 +197,12 @@ function getScrollKey() {
 }
 
 function saveScrollPos() {
-  if (listRef.value) {
-    sessionStorage.setItem(getScrollKey(), String(listRef.value.scrollTop))
-    console.log('[saveScrollPos] key:', getScrollKey(), 'value:', listRef.value.scrollTop)
-  }
+  if (saveScrollTimer) clearTimeout(saveScrollTimer)
+  saveScrollTimer = setTimeout(() => {
+    if (listRef.value) {
+      sessionStorage.setItem(getScrollKey(), String(listRef.value.scrollTop))
+    }
+  }, 200)
 }
 
 function restoreScrollPos() {
@@ -231,7 +234,10 @@ function restoreScrollPos() {
 }
 
 onDeactivated(() => {
-  console.log('[onDeactivated] scrollTop:', listRef.value?.scrollTop)
+  if (saveScrollTimer) clearTimeout(saveScrollTimer)
+  if (listRef.value) {
+    sessionStorage.setItem(getScrollKey(), String(listRef.value.scrollTop))
+  }
 })
 
 onActivated(() => {
@@ -261,6 +267,7 @@ onBeforeUnmount(() => {
   longPressTimers.clear()
   if (scrollTimer) clearTimeout(scrollTimer)
   if (scrollbarHoverTimer) clearTimeout(scrollbarHoverTimer)
+  if (saveScrollTimer) clearTimeout(saveScrollTimer)
   document.removeEventListener('mousemove', onMouseMove)
   document.removeEventListener('mouseup', onMouseUp)
 })
@@ -287,10 +294,10 @@ function scrollToPrevMessage() {
   const items = el.querySelectorAll('[data-message-id]')
   if (items.length === 0) return
   const st = el.scrollTop
+  const containerRect = el.getBoundingClientRect()
   let target: Element | null = null
   for (let i = items.length - 1; i >= 0; i--) {
     const rect = (items[i] as HTMLElement).getBoundingClientRect()
-    const containerRect = el.getBoundingClientRect()
     const itemTop = rect.top - containerRect.top + st
     if (itemTop < st - 10) {
       target = items[i]
@@ -312,9 +319,9 @@ function scrollToNextMessage() {
   const items = el.querySelectorAll('[data-message-id]')
   if (items.length === 0) return
   const st = el.scrollTop
+  const containerRect = el.getBoundingClientRect()
   for (let i = 0; i < items.length; i++) {
     const rect = (items[i] as HTMLElement).getBoundingClientRect()
-    const containerRect = el.getBoundingClientRect()
     const itemTop = rect.top - containerRect.top + st
     if (itemTop > st + 10) {
       if (items[i] === items[items.length - 1]) {
@@ -329,26 +336,37 @@ function scrollToNextMessage() {
 }
 
 async function appendUserMessage() {
-  const msgs = await db.messages
-    .where('archiveId')
-    .equals(props.archiveId)
-    .sortBy('timestamp')
-  const last = msgs.filter(m => m.role === 'user').pop()
-  if (last) {
-    messages.value.push(last)
-    await scrollToBottom()
+  const last = messages.value.filter(m => m.role === 'user').pop()
+  if (!last) {
+    const msgs = await db.messages
+      .where('archiveId')
+      .equals(props.archiveId)
+      .sortBy('timestamp')
+    const lastFromDb = msgs.filter(m => m.role === 'user').pop()
+    if (lastFromDb) {
+      messages.value.push(lastFromDb)
+      await scrollToBottom()
+    }
+    return
   }
+  messages.value.push(last)
+  await scrollToBottom()
 }
 
 async function appendAiMessage() {
-  const msgs = await db.messages
-    .where('archiveId')
-    .equals(props.archiveId)
-    .sortBy('timestamp')
-  const last = msgs.filter(m => m.role === 'assistant').pop()
-  if (last) {
-    messages.value.push(last)
+  const last = messages.value.filter(m => m.role === 'assistant').pop()
+  if (!last) {
+    const msgs = await db.messages
+      .where('archiveId')
+      .equals(props.archiveId)
+      .sortBy('timestamp')
+    const lastFromDb = msgs.filter(m => m.role === 'assistant').pop()
+    if (lastFromDb) {
+      messages.value.push(lastFromDb)
+    }
+    return
   }
+  messages.value.push(last)
 }
 
 function updateMessage(id: number) {

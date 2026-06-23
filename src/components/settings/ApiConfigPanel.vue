@@ -174,10 +174,8 @@ async function onDrop(e: DragEvent, targetIdx: number) {
   configs.value.splice(targetIdx, 0, moved)
   for (let i = 0; i < configs.value.length; i++) {
     configs.value[i].sortOrder = i
-    if (configs.value[i].id! > 0) {
-      await db.apiConfigs.update(configs.value[i].id!, { sortOrder: i })
-    }
   }
+  await db.apiConfigs.bulkPut(configs.value.filter(c => c.id! > 0))
   const newSet = new Set<number>()
   for (const id of dirtyIds.value) {
     if (configs.value.some(c => c.id === id)) newSet.add(id)

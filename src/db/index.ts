@@ -57,6 +57,13 @@ export class NarrativeForgeDB extends Dexie {
         }
       }
     })
+    this.version(5).stores({
+      archives: '++id, createdAt',
+      messages: '++id, archiveId, [archiveId+timestamp], [archiveId+summaryStatus]',
+      apiConfigs: '++id, name',
+      systemConfigs: '++id, key, sortOrder',
+      characterRoles: '++id, archiveId, sortOrder, [archiveId+sortOrder]',
+    })
   }
 }
 

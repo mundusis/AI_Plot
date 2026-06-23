@@ -225,19 +225,19 @@ async function openAiModal() {
     appStore.showToast('请先在全局配置中添加 API 配置', 'error')
     return
   }
-  await loadDefaultIds()
-  await refreshSystemConfigCache()
+  const [, , archive] = await Promise.all([
+    loadDefaultIds(),
+    refreshSystemConfigCache(),
+    archiveId.value ? db.archives.get(archiveId.value) : Promise.resolve(null),
+  ])
   if (!aiApiId.value || !apiConfigs.value.some(a => a.id === aiApiId.value)) {
     aiApiId.value = apiConfigs.value[0]?.id ?? null
   }
-  if (archiveId.value) {
-    const archive = await db.archives.get(archiveId.value)
-    if (archive) {
-      referencedSystemConfigIds.value = [...archive.referencedSystemConfigKeys]
-      referencedPrivateConfigKeys.value = [...(archive.referencedPrivateConfigKeys || [])]
-      archivePrivateConfigs.value = archive.privateConfigs || []
-    }
-  } else {
+  if (archive) {
+    referencedSystemConfigIds.value = [...archive.referencedSystemConfigKeys]
+    referencedPrivateConfigKeys.value = [...(archive.referencedPrivateConfigKeys || [])]
+    archivePrivateConfigs.value = archive.privateConfigs || []
+  } else if (!archiveId.value) {
     referencedSystemConfigIds.value = JSON.parse(localStorage.getItem('characterGenReferencedSystemConfigIds') || '[]')
     referencedPrivateConfigKeys.value = JSON.parse(localStorage.getItem('characterGenReferencedPrivateConfigKeys') || '[]')
     archivePrivateConfigs.value = []
@@ -280,8 +280,8 @@ async function generateCharacter() {
     const config = defaultIds.value.character ? await db.systemConfigs.get(defaultIds.value.character) : undefined
     let systemPrompt = config?.value || defaultSystemPrompt
 
-    for (const id of referencedSystemConfigIds.value) {
-      const sysCfg = await db.systemConfigs.get(id)
+    const systemConfigs = await db.systemConfigs.bulkGet(referencedSystemConfigIds.value)
+    for (const sysCfg of systemConfigs) {
       if (sysCfg) {
         systemPrompt += `\n\n【${sysCfg.key}】\n${sysCfg.value}`
       }
@@ -363,7 +363,7 @@ onMounted(async () => {
     personalityPreferences.value = role.personalityPreferences
     keyLines.value = role.keyLines
     abilities.value = role.abilities
-    await preloadImages(role.images)
+    preloadImages(role.images)
     images.value = [...role.images]
     createdAt.value = role.createdAt
     sortOrder.value = role.sortOrder
