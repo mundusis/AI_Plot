@@ -68,3 +68,4 @@ export class NarrativeForgeDB extends Dexie {
 }
 
 export const db = new NarrativeForgeDB()
+db.open()
