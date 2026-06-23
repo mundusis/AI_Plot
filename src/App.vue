@@ -1,5 +1,11 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
+import { db } from '@/db'
 import Toast from '@/components/common/Toast.vue'
+
+onMounted(() => {
+  db.open()
+})
 </script>
 
 <template>

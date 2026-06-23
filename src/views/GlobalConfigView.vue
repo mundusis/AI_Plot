@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, reactive, watch, onMounted } from 'vue'
 import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { ArrowLeft, Download, Upload } from 'lucide-vue-next'
 import ApiConfigPanel from '@/components/settings/ApiConfigPanel.vue'
@@ -14,6 +14,12 @@ import { preloadImages } from '@/composables/useImagePreload'
 const router = useRouter()
 const appStore = useAppStore()
 const activeTab = ref<'api' | 'system' | 'roles'>('roles')
+
+// 面板懒挂载：默认 Tab 直接渲染，其余 Tab 首次点击时才创建组件实例
+const tabsMounted = reactive({ api: false, system: false, roles: true })
+watch(activeTab, (tab) => {
+  if (!tabsMounted[tab]) tabsMounted[tab] = true
+})
 
 const apiPanelRef = ref<InstanceType<typeof ApiConfigPanel> | null>(null)
 const systemPanelRef = ref<InstanceType<typeof SystemConfigPanel> | null>(null)
@@ -179,7 +185,7 @@ async function confirmImport() {
         :class="[
           'flex-1 py-2 transition-all duration-75 h-10 sm:h-11',
           activeTab === 'api'
-            ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)] font-semibold text-base sm:text-lg rounded-t-md shadow-[inset_0_-2px_0_var(--color-accent)]'
+            ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)] font-semibold text-[17px] sm:text-lg rounded-t-md shadow-[inset_0_-2px_0_var(--color-accent)]'
             : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-black/[0.06] font-medium text-sm sm:text-base rounded-md'
         ]"
         @click="activeTab = 'api'"
@@ -190,7 +196,7 @@ async function confirmImport() {
         :class="[
           'flex-1 py-2 transition-all duration-75 h-10 sm:h-11',
           activeTab === 'roles'
-            ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)] font-semibold text-base sm:text-lg rounded-t-md shadow-[inset_0_-2px_0_var(--color-accent)]'
+            ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)] font-semibold text-[17px] sm:text-lg rounded-t-md shadow-[inset_0_-2px_0_var(--color-accent)]'
             : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-black/[0.06] font-medium text-sm sm:text-base rounded-md'
         ]"
         @click="activeTab = 'roles'"
@@ -201,7 +207,7 @@ async function confirmImport() {
         :class="[
           'flex-1 py-2 transition-all duration-75 h-10 sm:h-11',
           activeTab === 'system'
-            ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)] font-semibold text-base sm:text-lg rounded-t-md shadow-[inset_0_-2px_0_var(--color-accent)]'
+            ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)] font-semibold text-[17px] sm:text-lg rounded-t-md shadow-[inset_0_-2px_0_var(--color-accent)]'
             : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-black/[0.06] font-medium text-sm sm:text-base rounded-md'
         ]"
         @click="activeTab = 'system'"
@@ -212,6 +218,7 @@ async function confirmImport() {
 
     <div class="flex-1 overflow-y-auto px-4 pb-4 bg-[var(--color-bg)]">
       <RoleManager
+        v-if="tabsMounted.roles"
         v-show="activeTab === 'roles'"
         ref="roleManagerRef"
         :roles="systemRoles"
@@ -223,8 +230,8 @@ async function confirmImport() {
         @delete="handleRoleDelete"
         @reorder="handleRoleReorder"
       />
-      <ApiConfigPanel v-show="activeTab === 'api'" ref="apiPanelRef" />
-      <SystemConfigPanel v-show="activeTab === 'system'" ref="systemPanelRef" />
+      <ApiConfigPanel v-if="tabsMounted.api" v-show="activeTab === 'api'" ref="apiPanelRef" />
+      <SystemConfigPanel v-if="tabsMounted.system" v-show="activeTab === 'system'" ref="systemPanelRef" />
     </div>
 
     <input type="file" accept=".json" ref="fileInputRef" class="hidden" @change="handleFileChange" />
