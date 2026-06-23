@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Toast from '@/components/common/Toast.vue'
 
@@ -11,6 +11,18 @@ router.beforeEach(() => {
 })
 router.afterEach(() => {
   isNavigating.value = false
+})
+
+onMounted(() => {
+  const schedule = window.requestIdleCallback || ((cb: IdleRequestCallback) => setTimeout(cb, 1))
+  schedule(() => {
+    // 当前页面已加载完成, 利用空闲时间预下载其余子页面
+    import('@/views/GlobalConfigView.vue')
+    import('@/views/StoryView.vue')
+    import('@/views/MemoryView.vue')
+    import('@/views/ArchiveConfigView.vue')
+    import('@/views/CharacterRoleEdit.vue')
+  })
 })
 </script>
 
