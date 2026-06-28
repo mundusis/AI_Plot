@@ -92,6 +92,7 @@ export interface TokenUsage {
 // ============ 角色表 ============
 export interface CharacterRole {
   id?: number
+  remark: string
   name: string
   age: string
   gender: string

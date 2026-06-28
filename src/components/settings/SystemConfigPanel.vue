@@ -33,6 +33,17 @@ function isDefaultItem(id: number | undefined): boolean {
   return id != null && isDefaultId(id)
 }
 
+function isDefaultValueModified(item: SystemConfigItem): boolean {
+  if (!isDefaultItem(item.id)) return false
+  const id = item.id
+  let defIndex = -1
+  if (id != null && id === defaultIds.value.story) defIndex = 0
+  else if (id != null && id === defaultIds.value.summary) defIndex = 1
+  else if (id != null && id === defaultIds.value.character) defIndex = 2
+  if (defIndex < 0) return false
+  return item.value !== DEFAULT_ITEMS[defIndex].value
+}
+
 const expandedId = ref<number | null>(null)
 const deleteTarget = ref<number | null>(null)
 const restoreTarget = ref<SystemConfigItem | null>(null)
@@ -296,7 +307,7 @@ onMounted(() => {
         <span class="font-semibold text-sm">{{ item.remark || item.key }}</span>
         <div class="flex items-center gap-2">
           <button
-            v-if="isDefaultItem(item.id)"
+            v-if="isDefaultItem(item.id) && isDefaultValueModified(item)"
             class="text-[var(--color-text-muted)] hover:text-[var(--color-accent)] transition-colors"
             title="恢复默认"
             @click.stop="requestRestore(item)"

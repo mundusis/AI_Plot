@@ -50,7 +50,7 @@ const createdDate = computed(() => {
       <div class="role-card-overlay" />
       <div class="role-card-content">
         <div class="role-card-center">
-          <span class="role-card-name">{{ role.name || '未命名角色' }}</span>
+          <span class="role-card-name">{{ role.remark ? `${role.remark} | ${role.name || '未命名角色'}` : (role.name || '未命名角色') }}</span>
           <span class="role-card-updated">{{ updatedDate }}</span>
         </div>
         <span class="role-card-created">创建于 {{ createdDate }}</span>

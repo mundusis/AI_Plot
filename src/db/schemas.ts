@@ -77,6 +77,7 @@ export interface TokenUsage {
 
 export interface CharacterRole {
   id?: number
+  remark: string
   name: string
   age: string
   gender: string

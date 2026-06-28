@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { db } from '@/db'
 import { useAppStore } from '@/stores/app'
 import { callLLM } from '@/composables/useLLM'
@@ -21,6 +21,7 @@ const archiveId = computed(() => {
   return q ? Number(q) : undefined
 })
 
+const remark = ref('')
 const name = ref('')
 const age = ref('')
 const gender = ref('')
@@ -35,6 +36,28 @@ const roleId = ref<number | null>(null)
 const createdAt = ref(Date.now())
 const sortOrder = ref(Date.now())
 const saving = ref(false)
+
+const showLeaveConfirm = ref(false)
+const leaving = ref(false)
+const originalData = ref<string>('')
+
+const isDirty = computed(() => {
+  const current = JSON.stringify({
+    remark: remark.value.trim(),
+    name: name.value.trim(),
+    age: age.value.trim(),
+    gender: gender.value.trim(),
+    identity: identity.value,
+    background: background.value,
+    appearance: appearance.value,
+    personalityPreferences: personalityPreferences.value,
+    keyLines: keyLines.value,
+    abilities: abilities.value,
+    images: images.value,
+    archiveId: archiveId.value,
+  })
+  return current !== originalData.value
+})
 
 // AI 生成相关
 const showAiModal = ref(false)
@@ -264,6 +287,7 @@ async function generateCharacter() {
 请严格按照以下JSON格式返回，不要包含任何其他内容（不要markdown代码块标记）：
 
 {
+  "remark": "备注信息",
   "name": "角色名字",
   "age": "年龄",
   "gender": "性别",
@@ -297,6 +321,7 @@ async function generateCharacter() {
     if (referExistingRole.value) {
       const existingFields: string[] = []
       const add = (label: string, val: string) => { if (val.trim()) existingFields.push(`${label}：${val.trim()}`) }
+      add('备注', remark.value)
       add('名字', name.value)
       add('年龄', age.value)
       add('性别', gender.value)
@@ -323,6 +348,7 @@ async function generateCharacter() {
 
     const parsed = JSON.parse(jsonStr)
     name.value = parsed.name || ''
+    remark.value = parsed.remark || ''
     age.value = parsed.age || ''
     gender.value = parsed.gender || ''
     identity.value = parsed.identity || ''
@@ -343,6 +369,32 @@ async function generateCharacter() {
   }
 }
 
+onBeforeRouteLeave((to, from, next) => {
+  if (leaving.value) {
+    next()
+    return
+  }
+  if (isDirty.value) {
+    showLeaveConfirm.value = true
+    next(false)
+  } else {
+    next()
+  }
+})
+
+function handleBack() {
+  if (isDirty.value) {
+    showLeaveConfirm.value = true
+  } else {
+    router.back()
+  }
+}
+
+function confirmLeave() {
+  leaving.value = true
+  router.back()
+}
+
 onMounted(async () => {
   document.addEventListener('click', handleClickOutside)
   if (!isNew.value) {
@@ -350,11 +402,13 @@ onMounted(async () => {
     const role = await db.characterRoles.get(id)
     if (!role) {
       appStore.showToast('角色不存在', 'error')
+      leaving.value = true
       router.back()
       return
     }
     roleId.value = role.id!
     name.value = role.name
+    remark.value = role.remark || ''
     age.value = role.age
     gender.value = role.gender
     identity.value = role.identity
@@ -368,6 +422,20 @@ onMounted(async () => {
     createdAt.value = role.createdAt
     sortOrder.value = role.sortOrder
   }
+  originalData.value = JSON.stringify({
+    remark: remark.value.trim(),
+    name: name.value.trim(),
+    age: age.value.trim(),
+    gender: gender.value.trim(),
+    identity: identity.value,
+    background: background.value,
+    appearance: appearance.value,
+    personalityPreferences: personalityPreferences.value,
+    keyLines: keyLines.value,
+    abilities: abilities.value,
+    images: images.value,
+    archiveId: archiveId.value,
+  })
 })
 
 onUnmounted(() => {
@@ -415,6 +483,7 @@ async function save() {
   saving.value = true
   try {
     const data: Omit<CharacterRole, 'id'> = {
+      remark: remark.value.trim(),
       name: name.value.trim(),
       age: age.value.trim(),
       gender: gender.value.trim(),
@@ -438,6 +507,7 @@ async function save() {
       await db.characterRoles.update(roleId.value!, data)
       appStore.showToast('角色已保存', 'success')
     }
+    leaving.value = true
     router.back()
   } catch {
     appStore.showToast('保存失败', 'error')
@@ -452,7 +522,7 @@ async function save() {
     <header class="flex items-center gap-2 sm:gap-4 px-3 sm:px-4 py-3 page-header shrink-0">
       <button
         class="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-        @click="router.back()"
+        @click="handleBack"
       >
         <ArrowLeft :size="20" />
       </button>
@@ -499,6 +569,17 @@ async function save() {
           multiple
           class="hidden"
           @change="handleFileChange"
+        />
+      </div>
+
+      <!-- 备注 -->
+      <div>
+        <label class="block text-sm sm:text-base font-medium mb-1">备注</label>
+        <input
+          v-model="remark"
+          type="text"
+          class="w-full px-3 py-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-accent)] focus:outline-none text-sm"
+          placeholder="角色备注"
         />
       </div>
 
@@ -797,5 +878,15 @@ async function save() {
 
     <ConfirmModal :visible="deletePrivateKey !== null" title="解除引用" :message="`确认解除对私有配置项「${deletePrivateKey}」的引用？`" confirm-text="解除"
       @confirm="deletePrivateKey !== null && removePrivateConfig(deletePrivateKey)" @cancel="deletePrivateKey = null" />
+
+    <ConfirmModal
+      :visible="showLeaveConfirm"
+      title="未保存的更改"
+      message="当前有未保存的更改，离开将丢失所有修改。确认离开？"
+      confirm-text="确认离开"
+      :danger="true"
+      @confirm="confirmLeave()"
+      @cancel="showLeaveConfirm = false"
+    />
   </div>
 </template>
